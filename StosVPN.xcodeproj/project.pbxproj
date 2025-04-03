@@ -434,7 +434,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = TunnelProv/TunnelProv.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 95J8WZ4TN8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TunnelProv/Info.plist;
@@ -462,7 +462,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = TunnelProv/TunnelProv.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 95J8WZ4TN8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TunnelProv/Info.plist;

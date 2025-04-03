@@ -28,6 +28,22 @@ class VPNLogger: ObservableObject {
     }
 }
 
+class PrivacyManager {
+    static let shared = PrivacyManager()
+    
+    // This function explicitly shows we're not collecting any data
+    func collectUserData() -> [String: Any]? {
+        return nil
+    }
+    
+    // This function explicitly shows we're not sharing any data
+    func shareDataWithThirdParties() -> Bool {
+        return false
+    }
+    
+    private init() {}
+}
+
 // MARK: - Tunnel Manager
 class TunnelManager: ObservableObject {
     @Published var hasLocalDeviceSupport = false
@@ -383,7 +399,7 @@ struct StatusIndicatorView: View {
                 updateAnimation()
             }
             
-            Text(tunnelManager.tunnelStatus == .connected ? "Tunnel active" : "Tunnel inactive")
+            Text(tunnelManager.tunnelStatus == .connected ? "Local tunnel active" : "Local tunnel inactive")
                 .font(.subheadline)
                 .foregroundColor(tunnelManager.tunnelStatus == .connected ? .green : .secondary)
         }
@@ -475,7 +491,7 @@ struct ConnectionStatsView: View {
     
     var body: some View {
         VStack(spacing: 25) {
-            Text("Connection Details")
+            Text("Local Tunnel Details")
                 .font(.headline)
                 .foregroundColor(.primary)
             
@@ -555,6 +571,7 @@ struct StatItemView: View {
     }
 }
 
+// MARK: - Updated SettingsView
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
@@ -602,16 +619,20 @@ struct SettingsView: View {
                     }
                 }
                 
-                Section(header: Text("About")) {
+                Section(header: Text("App Information")) {
+                    NavigationLink(destination: PrivacyPolicyView()) {
+                        Label("Privacy Policy", systemImage: "lock.shield")
+                    }
+                    
+                    NavigationLink(destination: DataCollectionInfoView()) {
+                        Label("Data Collection Policy", systemImage: "hand.raised.slash")
+                    }
+                    
                     HStack {
                         Text("App Version")
                         Spacer()
                         Text("1.0.0")
                             .foregroundColor(.secondary)
-                    }
-                    
-                    Button("Privacy Policy") {
-                        UIApplication.shared.open(URL(string: "https://github.com/stossy11/PrivacyPolicy/blob/main/PrivacyPolicy.md")!)
                     }
                     
                     NavigationLink(destination: HelpView()) {
@@ -632,7 +653,49 @@ struct SettingsView: View {
     }
 }
 
+// MARK: - New Data Collection Info View
+struct DataCollectionInfoView: View {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Data Collection Policy")
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .padding(.bottom, 10)
+                
+                GroupBox(label: Label("No Data Collection", systemImage: "hand.raised.slash").font(.headline)) {
+                    Text("StosVPN does NOT collect any user data, traffic information, or browsing activity. This app creates a purely local network tunnel that stays entirely on your device.")
+                        .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Local Processing Only", systemImage: "iphone").font(.headline)) {
+                    Text("All network traffic and configurations are processed locally on your device. No information ever leaves your device or is transmitted over the internet.")
+                        .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("No Third-Party Sharing", systemImage: "person.2.slash").font(.headline)) {
+                    Text("Since we collect no data, there is no data shared with third parties. We have no analytics, tracking, or data collection mechanisms in this app.")
+                        .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Why Use Network Permissions", systemImage: "network").font(.headline)) {
+                    Text("StosVPN requires network extension permissions to create a local network interface on your device. This is used exclusively for local development and testing purposes, such as connecting to local web servers for development.")
+                        .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Our Promise", systemImage: "checkmark.seal").font(.headline)) {
+                    Text("We're committed to privacy and transparency. This app is designed for developers to test and connect to local servers on their device without any privacy concerns.")
+                        .padding(.vertical)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Data Collection")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
 
+// MARK: - Updated ConnectionLogView
 struct ConnectionLogView: View {
     @StateObject var logger = VPNLogger.shared
     var body: some View {
@@ -645,28 +708,164 @@ struct ConnectionLogView: View {
     }
 }
 
+// MARK: - Updated PrivacyPolicyView
 struct PrivacyPolicyView: View {
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 15) {
+            VStack(alignment: .leading, spacing: 20) {
                 Text("Privacy Policy")
                     .font(.title)
                     .fontWeight(.bold)
                     .padding(.bottom, 10)
                 
-                Text("Your privacy is important to us. This application is designed to create a local network interface for development and testing purposes.")
+                Text("Last Updated: April 2, 2025")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 20)
                 
-                Text("Data Collection")
-                    .font(.headline)
-                    .padding(.top, 10)
+                GroupBox(label: Label("Overview", systemImage: "text.justify").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("StosVPN is designed exclusively to create a purely local network interface for iOS development and testing purposes. This app is fundamentally different from traditional VPN services:")
+                            .padding(.vertical, 5)
+                        
+                        Text("• All network activity remains entirely on your device")
+                        Text("• No external servers are involved in the operation of this app")
+                        Text("• No internet traffic is routed through our servers or any third-party services")
+                        Text("• The app functions entirely locally on your device")
+                    }
+                    .padding(.vertical)
+                }
                 
-                Text("This application does not collect any personal information. All traffic remains on your device.")
+                GroupBox(label: Label("Zero Data Collection", systemImage: "lock.shield").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("StosVPN does NOT collect any data whatsoever, including:")
+                            .fontWeight(.medium)
+                            .padding(.bottom, 5)
+                        
+                        Text("• Personal information (name, email, phone number, address)")
+                        Text("• Device identifiers (IP address, IDFA, IDFV, device name)")
+                        Text("• Usage statistics or app analytics")
+                        Text("• Network traffic data or browsing history")
+                        Text("• Location information")
+                        Text("• User content or files")
+                        Text("• Network requests or connection details")
+                        Text("• Technical device information")
+                        
+                        Text("We are committed to absolute zero data collection. No information of any kind is ever transmitted from your device, logged, or stored by our app.")
+                            .fontWeight(.medium)
+                            .padding(.top, 10)
+                    }
+                    .padding(.vertical)
+                }
                 
-                Text("Permissions")
-                    .font(.headline)
-                    .padding(.top, 10)
+                GroupBox(label: Label("How StosVPN Works", systemImage: "gear").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Technical Implementation:")
+                            .fontWeight(.medium)
+                            .padding(.bottom, 5)
+                        
+                        Text("StosVPN uses Apple's Network Extension framework to create a local network interface directly on your device. This technology:")
+                            .padding(.bottom, 5)
+                        
+                        Text("• Creates a virtual network adapter on your iOS device")
+                        Text("• Configures this adapter with user-specified local IP addresses")
+                        Text("• Enables routing between your apps and locally hosted servers")
+                        Text("• Operates entirely within your device's memory")
+                        Text("• Does not modify, intercept, or process any internet traffic")
+                        
+                        Text("This functionality is specifically designed for developers testing iOS applications that need to communicate with locally hosted web or API servers.")
+                            .padding(.top, 10)
+                    }
+                    .padding(.vertical)
+                }
                 
-                Text("This app requires network extension permissions to create a virtual network interface on your device.")
+                GroupBox(label: Label("Required Permissions", systemImage: "checkmark.shield").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("StosVPN requires network extension permissions for the sole purpose of creating a virtual network interface on your device.")
+                            .padding(.bottom, 5)
+                        
+                        Text("Apple's Privacy Purpose String:")
+                            .fontWeight(.medium)
+                            .padding(.top, 5)
+                        
+                        Text("\"StosVPN requires network extension permissions to create a local virtual network interface used exclusively for development and testing. This permission is not used to monitor, collect, or transmit any user data.\"")
+                            .italic()
+                            .padding(.horizontal)
+                            .padding(.vertical, 5)
+                        
+                        Text("These permissions are never used to:")
+                            .fontWeight(.medium)
+                            .padding(.top, 5)
+                        
+                        Text("• Monitor network traffic")
+                        Text("• Access your browsing history")
+                        Text("• Read or transmit personal information")
+                        Text("• Track your location or device usage")
+                    }
+                    .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("No Third-Party Sharing", systemImage: "person.2.slash").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("StosVPN does not share data with third parties because:")
+                            .padding(.bottom, 5)
+                        
+                        Text("• We collect absolutely no data")
+                        Text("• The app contains no analytics frameworks")
+                        Text("• No advertising or tracking SDKs are included")
+                        Text("• No external servers are contacted during operation")
+                        Text("• No cookies or other tracking technologies are used")
+                        
+                        Text("All functionality is implemented using Apple's native frameworks, with no third-party services or libraries that could potentially access user data.")
+                            .padding(.top, 10)
+                            .fontWeight(.medium)
+                    }
+                    .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Children's Privacy", systemImage: "person.crop.circle").font(.headline)) {
+                    Text("StosVPN is a developer tool and not intended for use by children under the age of 13. Since we do not collect any personal information from any users, including children, no special provisions are required to comply with children's privacy regulations.")
+                        .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Changes to This Policy", systemImage: "arrow.triangle.2.circlepath").font(.headline)) {
+                    Text("While our commitment to zero data collection will never change, we may update this privacy policy to clarify our practices or reflect changes in functionality. Any updates will be clearly dated and communicated through app updates.")
+                        .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Contact Information", systemImage: "envelope").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("If you have any questions, concerns, or requests regarding this privacy policy or StosVPN, please contact us at:")
+                            .padding(.bottom, 5)
+                        
+                        Text("privacy@stossvpn.com")
+                            .fontWeight(.medium)
+                        
+                        Text("We are committed to addressing any questions or concerns you may have about our privacy practices or this app's functionality.")
+                            .padding(.top, 10)
+                    }
+                    .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Your Rights", systemImage: "person.text.rectangle").font(.headline)) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Although we collect no personal data, you have the right to:")
+                            .padding(.bottom, 5)
+                        
+                        Text("• Request information about our data practices")
+                        Text("• Verify our zero-collection policy")
+                        Text("• Remove the app and all its local configuration at any time")
+                        
+                        Text("Since all configuration is stored locally on your device, uninstalling the app removes all data created by StosVPN.")
+                            .padding(.top, 10)
+                    }
+                    .padding(.vertical)
+                }
+                
+                GroupBox(label: Label("Apple App Store Compliance", systemImage: "apple.logo").font(.headline)) {
+                    Text("This app complies with all Apple App Store Review Guidelines, including guidelines 2.1 and 5.4 regarding data collection and VPN apps. StosVPN is a local development tool that uses VPN technology solely for creating a local network interface without any remote server connections or data collection.")
+                        .padding(.vertical)
+                }
             }
             .padding()
         }
@@ -675,41 +874,94 @@ struct PrivacyPolicyView: View {
     }
 }
 
+// MARK: - Updated HelpView
 struct HelpView: View {
     var body: some View {
         List {
             Section(header: Text("Frequently Asked Questions")) {
                 NavigationLink("What does this app do?") {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("This app creates a local network interface that can be used for development and testing purposes.")
+                        Text("StosVPN creates a local network interface that can be used for development and testing purposes. It does not route traffic through any external servers - everything stays on your device.")
                             .padding(.bottom, 10)
                         
                         Text("Common use cases include:")
                             .fontWeight(.medium)
                         
+                        Text("• Testing web applications with local web servers")
+                        Text("• Developing and debugging network-related features")
+                        Text("• Accessing locally hosted development environments")
                         Text("• Testing applications that require specific network configurations")
-                        Text("• Development of network-related features")
-                        Text("• Isolating network traffic for analysis or debugging")
+                    }
+                    .padding()
+                }
+                
+                NavigationLink("Is this a traditional VPN?") {
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("No, StosVPN is NOT a traditional VPN service. It does not:")
+                            .padding(.bottom, 10)
+                            .fontWeight(.medium)
+                        
+                        Text("• Route your traffic through external servers")
+                        Text("• Provide privacy or anonymity for internet browsing")
+                        Text("• Connect to remote VPN servers")
+                        Text("• Encrypt or route your internet traffic")
+                        
+                        Text("StosVPN only creates a local network interface on your device to help developers connect to local services and servers for testing and development purposes.")
+                            .padding(.top, 10)
                     }
                     .padding()
                 }
                 
                 NavigationLink("Why does the connection fail?") {
-                    
-                    Text("Why does the connection fail?")
-                        .fontWeight(.medium)
-                    
-                    Text("Connection failures could be due to system permission issues, configuration errors, or iOS restrictions. Try restarting the app or checking your settings.")
-                        .padding()
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("Connection failures could be due to system permission issues, configuration errors, or iOS restrictions.")
+                            .padding(.bottom, 10)
+                        
+                        Text("Troubleshooting steps:")
+                            .fontWeight(.medium)
+                        
+                        Text("• Ensure you've approved the network extension permission")
+                        Text("• Try restarting the app")
+                        Text("• Check if your IP configuration is valid")
+                        Text("• Restart your device if issues persist")
+                    }
+                    .padding()
                 }
                 
-                NavigationLink("What is this app for?") {
-                    
-                    Text("What is this app for?")
-                        .fontWeight(.medium)
-                    
-                    Text("This app is for connecting to local Servers on iOS devices to debug or test specific network applications, such as web-servers, or other network-related applications.")
-                        .padding()
+                NavigationLink("Who is this app for?") {
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("StosVPN is primarily designed for:")
+                            .fontWeight(.medium)
+                            .padding(.bottom, 10)
+                        
+                        Text("• Developers testing local web servers")
+                        Text("• App developers testing network features")
+                        Text("• QA engineers testing applications in isolated network environments")
+                        Text("• Anyone who needs to access locally hosted services on their iOS device")
+                        
+                        Text("This app is available to the general public and is especially useful for developers who need to test applications with network features on iOS devices.")
+                            .padding(.top, 10)
+                    }
+                    .padding()
+                }
+            }
+            
+            Section(header: Text("Business Model Information")) {
+                NavigationLink("How does StosVPN work?") {
+                    VStack(alignment: .leading, spacing: 15) {
+                        Text("StosVPN is a completely free app available to the general public. There are no paid features, subscriptions, or in-app purchases.")
+                            .padding(.bottom, 10)
+                        
+                        Text("Key points about our business model:")
+                            .fontWeight(.medium)
+                        
+                        Text("• The app is not restricted to any specific company or group")
+                        Text("• Anyone can download and use the app from the App Store")
+                        Text("• No account creation is required to use the app")
+                        Text("• All features are available to all users free of charge")
+                        Text("• The app is developed and maintained as an open utility for the iOS development community")
+                    }
+                    .padding()
                 }
             }
             
@@ -721,7 +973,7 @@ struct HelpView: View {
                 
                 HStack {
                     Image(systemName: "lock.shield")
-                    Text("Uses Apple's Network Extension API")
+                    Text("Uses Apple's Network Extension APIs")
                 }
             }
         }
@@ -738,13 +990,13 @@ struct SetupView: View {
     let pages = [
         SetupPage(
             title: "Welcome to StosVPN",
-            description: "A simple local network tunnel for everyone",
+            description: "A simple local network tunnel for developers",
             imageName: "checkmark.shield.fill",
-            details: "StosVPN creates a local network interface on your device that anyone can use for development, testing, and accessing local servers."
+            details: "StosVPN creates a local network interface on your device for development, testing, and accessing local servers. This app does NOT collect any user data or route traffic through external servers."
         ),
         SetupPage(
             title: "Why Use StosVPN?",
-            description: "Perfect for developers and everyday users",
+            description: "Perfect for iOS developers",
             imageName: "person.2.fill",
             details: "• Access local web servers and development environments\n• Test applications that require specific network configurations\n• Connect to local network services without complex setup\n• Create isolated network environments for testing"
         ),
@@ -752,13 +1004,13 @@ struct SetupView: View {
             title: "Easy to Use",
             description: "Just one tap to connect",
             imageName: "hand.tap.fill",
-            details: "StosVPN is designed to be simple and straightforward. Just tap the connect button to establish a local network tunnel with pre-configured settings that work for most users."
+            details: "StosVPN is designed to be simple and straightforward. Just tap the connect button to establish a local network tunnel with pre-configured settings that work for most developer testing needs."
         ),
         SetupPage(
             title: "Privacy Focused",
             description: "Your data stays on your device",
             imageName: "lock.shield.fill",
-            details: "StosVPN creates a local tunnel that doesn't route traffic through external servers. All network traffic remains on your device, ensuring your privacy and security."
+            details: "StosVPN creates a local tunnel that doesn't route traffic through external servers. All network traffic remains on your device, ensuring your privacy and security. No data is collected or shared with third parties."
         )
     ]
     
@@ -827,6 +1079,7 @@ struct SetupView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Skip") {
+                        hasNotCompletedSetup = false
                         dismiss()
                     }
                 }

@@ -61,10 +61,7 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
                 if protocols[i].int32Value == AF_INET {
                     modifiedPacket = self.packetReplaceIp(packet, self.tunnelDeviceIp, self.tunnelFakeIp, self.tunnelFakeIp, self.tunnelDeviceIp)
                 }
-                
-                NSLog("wow \(modifiedPacket)")
 
-                // Ensure packet has at least 20 bytes before swapping
                 if modifiedPacket.count >= 20 {
                     var mutableBytes = [UInt8](modifiedPacket)
                     
