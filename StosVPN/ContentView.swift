@@ -28,22 +28,6 @@ class VPNLogger: ObservableObject {
     }
 }
 
-class PrivacyManager {
-    static let shared = PrivacyManager()
-    
-    // This function explicitly shows we're not collecting any data
-    func collectUserData() -> [String: Any]? {
-        return nil
-    }
-    
-    // This function explicitly shows we're not sharing any data
-    func shareDataWithThirdParties() -> Bool {
-        return false
-    }
-    
-    private init() {}
-}
-
 // MARK: - Tunnel Manager
 class TunnelManager: ObservableObject {
     @Published var hasLocalDeviceSupport = false
@@ -109,7 +93,6 @@ class TunnelManager: ObservableObject {
             guard let self = self else { return }
             
             DispatchQueue.main.async {
-                
                 if let error = error {
                     VPNLogger.shared.log("Error loading preferences: \(error.localizedDescription)")
                     self.tunnelStatus = .error
@@ -119,21 +102,15 @@ class TunnelManager: ObservableObject {
                 self.hasLocalDeviceSupport = true
                 
                 if let managers = managers, !managers.isEmpty {
+                    // Look specifically for StosVPN manager
                     for manager in managers {
                         if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol,
                            proto.providerBundleIdentifier == self.tunnelBundleId {
                             self.vpnManager = manager
                             self.updateTunnelStatus(from: manager.connection.status)
-                            VPNLogger.shared.log("Loaded existing tunnel configuration")
+                            VPNLogger.shared.log("Loaded existing StosVPN tunnel configuration")
                             break
                         }
-                    }
-                    
-                    // If we didn't find a matching manager, use the first one
-                    if self.vpnManager == nil, let firstManager = managers.first {
-                        self.vpnManager = firstManager
-                        self.updateTunnelStatus(from: firstManager.connection.status)
-                        VPNLogger.shared.log("Using existing tunnel configuration")
                     }
                 } else {
                     VPNLogger.shared.log("No existing tunnel configuration found")
@@ -143,7 +120,7 @@ class TunnelManager: ObservableObject {
     }
     
     private func setupStatusObserver() {
-        NotificationCenter.default.addObserver(
+        vpnObserver = NotificationCenter.default.addObserver(
             forName: .NEVPNStatusDidChange,
             object: nil,
             queue: .main
@@ -153,7 +130,11 @@ class TunnelManager: ObservableObject {
                 return
             }
             
-            self.updateTunnelStatus(from: connection.status)
+            // Only update status if it's our VPN connection
+            if let manager = self.vpnManager,
+               connection == manager.connection {
+                self.updateTunnelStatus(from: connection.status)
+            }
         }
     }
     
@@ -174,70 +155,63 @@ class TunnelManager: ObservableObject {
                 self.tunnelStatus = .error
             }
             
-            VPNLogger.shared.log("VPN status updated: \(self.tunnelStatus.rawValue)")
+            VPNLogger.shared.log("StosVPN status updated: \(self.tunnelStatus.rawValue)")
         }
     }
     
-    private func createOrUpdateTunnelConfiguration(completion: @escaping (Bool) -> Void) {
-        // First check if we already have configurations
-        NETunnelProviderManager.loadAllFromPreferences { [weak self] (managers, error) in
-            guard let self = self else { return completion(false) }
-            
-            if let error = error {
-                VPNLogger.shared.log("Error loading preferences: \(error.localizedDescription)")
-                return completion(false)
-            }
-            
-            let manager: NETunnelProviderManager
-            if let existingManagers = managers, !existingManagers.isEmpty {
-                if let matchingManager = existingManagers.first(where: {
-                    ($0.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier == self.tunnelBundleId
-                }) {
-                    manager = matchingManager
-                    VPNLogger.shared.log("Updating existing tunnel configuration")
-                } else {
-                    manager = existingManagers[0]
-                    VPNLogger.shared.log("Using first available tunnel configuration")
+    private func createStosVPNConfiguration(completion: @escaping (NETunnelProviderManager?) -> Void) {
+        let manager = NETunnelProviderManager()
+        manager.localizedDescription = "StosVPN"
+        
+        let proto = NETunnelProviderProtocol()
+        proto.providerBundleIdentifier = self.tunnelBundleId
+        proto.serverAddress = "StosVPN's Local Network Tunnel"
+        manager.protocolConfiguration = proto
+        
+        let onDemandRule = NEOnDemandRuleEvaluateConnection()
+        onDemandRule.interfaceTypeMatch = .any
+        onDemandRule.connectionRules = [NEEvaluateConnectionRule(
+            matchDomains: ["10.7.0.0", "10.7.0.1"],
+            andAction: .connectIfNeeded
+        )]
+        
+        manager.onDemandRules = [onDemandRule]
+        manager.isOnDemandEnabled = true
+        manager.isEnabled = true
+        
+        manager.saveToPreferences { error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    VPNLogger.shared.log("Error creating StosVPN configuration: \(error.localizedDescription)")
+                    completion(nil)
+                    return
                 }
-            } else {
-                // Create a new manager if none exists
-                manager = NETunnelProviderManager()
-                VPNLogger.shared.log("Creating new tunnel configuration")
-            }
-            
-            manager.localizedDescription = "StosVPN"
-            
-            let proto = NETunnelProviderProtocol()
-            proto.providerBundleIdentifier = self.tunnelBundleId
-            proto.serverAddress = "StosVPN's Local Network Tunnel"
-            manager.protocolConfiguration = proto
-            
-            let onDemandRule = NEOnDemandRuleEvaluateConnection()
-            onDemandRule.interfaceTypeMatch = .any
-            onDemandRule.connectionRules = [NEEvaluateConnectionRule(
-                matchDomains: ["localhost"],
-                andAction: .connectIfNeeded
-            )]
-            
-            manager.onDemandRules = [onDemandRule]
-            manager.isOnDemandEnabled = true
-            manager.isEnabled = true
-            
-            manager.saveToPreferences { [weak self] error in
-                guard let self = self else { return completion(false) }
                 
-                DispatchQueue.main.async {
-                    if let error = error {
-                        VPNLogger.shared.log("Error saving tunnel configuration: \(error.localizedDescription)")
-                        completion(false)
-                        return
-                    }
-                    
-                    self.vpnManager = manager
-                    VPNLogger.shared.log("Tunnel configuration saved successfully")
-                    completion(true)
-                }
+                VPNLogger.shared.log("StosVPN configuration created successfully")
+                completion(manager)
             }
+        }
+    }
+    
+    private func getActiveVPNManager(completion: @escaping (NETunnelProviderManager?) -> Void) {
+        NETunnelProviderManager.loadAllFromPreferences { managers, error in
+            if let error = error {
+                VPNLogger.shared.log("Error loading VPN configurations: \(error.localizedDescription)")
+                completion(nil)
+                return
+            }
+            
+            guard let managers = managers else {
+                completion(nil)
+                return
+            }
+            
+            let activeManager = managers.first { manager in
+                return manager.connection.status == .connected ||
+                       manager.connection.status == .connecting
+            }
+            
+            completion(activeManager)
         }
     }
     
@@ -252,42 +226,73 @@ class TunnelManager: ObservableObject {
     }
     
     func startVPN() {
+        getActiveVPNManager { [weak self] activeManager in
+            guard let self = self else { return }
+            
+            if let activeManager = activeManager,
+               (activeManager.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier != self.tunnelBundleId {
+                VPNLogger.shared.log("Disconnecting existing VPN connection before starting StosVPN")
+                
+                // Set a flag to start StosVPN after disconnection
+                UserDefaults.standard.set(true, forKey: "ShouldStartStosVPNAfterDisconnect")
+                activeManager.connection.stopVPNTunnel()
+                return
+            }
+            
+            
+            self.initializeAndStartStosVPN()
+        }
+    }
+    
+    private func initializeAndStartStosVPN() {
         if let manager = vpnManager {
             startExistingVPN(manager: manager)
         } else {
-            createOrUpdateTunnelConfiguration { [weak self] success in
-                guard let self = self, success else { return }
-                self.loadTunnelPreferences()
+            createStosVPNConfiguration { [weak self] manager in
+                guard let self = self, let manager = manager else { return }
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    if let manager = self.vpnManager {
-                        self.startExistingVPN(manager: manager)
-                    }
-                }
+                self.vpnManager = manager
+                self.startExistingVPN(manager: manager)
             }
         }
     }
     
     private func startExistingVPN(manager: NETunnelProviderManager) {
         guard tunnelStatus != .connected else {
-            VPNLogger.shared.log("Network tunnel is already connected")
+            VPNLogger.shared.log("StosVPN tunnel is already connected")
             return
         }
         
-        tunnelStatus = .connecting
-        
-        let options: [String: NSObject] = [
-            "TunnelDeviceIP": tunnelDeviceIp as NSObject,
-            "TunnelFakeIP": tunnelFakeIp as NSObject,
-            "TunnelSubnetMask": tunnelSubnetMask as NSObject
-        ]
-        
-        do {
-            try manager.connection.startVPNTunnel(options: options)
-            VPNLogger.shared.log("Network tunnel start initiated")
-        } catch {
-            tunnelStatus = .error
-            VPNLogger.shared.log("Failed to start tunnel: \(error.localizedDescription)")
+        manager.isEnabled = true
+        manager.saveToPreferences { error in
+            if let error = error {
+                VPNLogger.shared.log(error.localizedDescription)
+                return
+            }
+            
+            // Reload it to apply
+            manager.loadFromPreferences { error in
+                if let error = error {
+                    VPNLogger.shared.log(error.localizedDescription)
+                    return
+                }
+                
+                self.tunnelStatus = .connecting
+                
+                let options: [String: NSObject] = [
+                    "TunnelDeviceIP": self.tunnelDeviceIp as NSObject,
+                    "TunnelFakeIP": self.tunnelFakeIp as NSObject,
+                    "TunnelSubnetMask": self.tunnelSubnetMask as NSObject
+                ]
+                
+                do {
+                    try manager.connection.startVPNTunnel(options: options)
+                    VPNLogger.shared.log("StosVPN tunnel start initiated")
+                } catch {
+                    self.tunnelStatus = .error
+                    VPNLogger.shared.log("Failed to start StosVPN tunnel: \(error.localizedDescription)")
+                }
+            }
         }
     }
     
@@ -296,7 +301,27 @@ class TunnelManager: ObservableObject {
         
         tunnelStatus = .disconnecting
         manager.connection.stopVPNTunnel()
-        VPNLogger.shared.log("Network tunnel stop initiated")
+        VPNLogger.shared.log("StosVPN tunnel stop initiated")
+        
+        UserDefaults.standard.removeObject(forKey: "ShouldStartStosVPNAfterDisconnect")
+    }
+    
+    func handleVPNStatusChange(notification: Notification) {
+        guard let connection = notification.object as? NEVPNConnection else { return }
+        
+        if let manager = vpnManager, connection == manager.connection {
+            updateTunnelStatus(from: connection.status)
+            return
+        }
+        
+        if connection.status == .disconnected &&
+           UserDefaults.standard.bool(forKey: "ShouldStartStosVPNAfterDisconnect") {
+            UserDefaults.standard.removeObject(forKey: "ShouldStartStosVPNAfterDisconnect")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.initializeAndStartStosVPN()
+            }
+        }
     }
     
     deinit {
@@ -620,7 +645,9 @@ struct SettingsView: View {
                 }
                 
                 Section(header: Text("App Information")) {
-                    NavigationLink(destination: PrivacyPolicyView()) {
+                    Button {
+                        UIApplication.shared.open(URL(string: "https://github.com/stossy11/PrivacyPolicy/blob/main/PrivacyPolicy.md")!, options: [:])
+                    } label: {
                         Label("Privacy Policy", systemImage: "lock.shield")
                     }
                     
@@ -631,7 +658,7 @@ struct SettingsView: View {
                     HStack {
                         Text("App Version")
                         Spacer()
-                        Text("1.0.0")
+                        Text("1.1.0")
                             .foregroundColor(.secondary)
                     }
                     
@@ -704,172 +731,6 @@ struct ConnectionLogView: View {
                 .font(.system(.body, design: .monospaced))
         }
         .navigationTitle("Logs")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
-
-// MARK: - Updated PrivacyPolicyView
-struct PrivacyPolicyView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                Text("Privacy Policy")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .padding(.bottom, 10)
-                
-                Text("Last Updated: April 2, 2025")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 20)
-                
-                GroupBox(label: Label("Overview", systemImage: "text.justify").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("StosVPN is designed exclusively to create a purely local network interface for iOS development and testing purposes. This app is fundamentally different from traditional VPN services:")
-                            .padding(.vertical, 5)
-                        
-                        Text("• All network activity remains entirely on your device")
-                        Text("• No external servers are involved in the operation of this app")
-                        Text("• No internet traffic is routed through our servers or any third-party services")
-                        Text("• The app functions entirely locally on your device")
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Zero Data Collection", systemImage: "lock.shield").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("StosVPN does NOT collect any data whatsoever, including:")
-                            .fontWeight(.medium)
-                            .padding(.bottom, 5)
-                        
-                        Text("• Personal information (name, email, phone number, address)")
-                        Text("• Device identifiers (IP address, IDFA, IDFV, device name)")
-                        Text("• Usage statistics or app analytics")
-                        Text("• Network traffic data or browsing history")
-                        Text("• Location information")
-                        Text("• User content or files")
-                        Text("• Network requests or connection details")
-                        Text("• Technical device information")
-                        
-                        Text("We are committed to absolute zero data collection. No information of any kind is ever transmitted from your device, logged, or stored by our app.")
-                            .fontWeight(.medium)
-                            .padding(.top, 10)
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("How StosVPN Works", systemImage: "gear").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Technical Implementation:")
-                            .fontWeight(.medium)
-                            .padding(.bottom, 5)
-                        
-                        Text("StosVPN uses Apple's Network Extension framework to create a local network interface directly on your device. This technology:")
-                            .padding(.bottom, 5)
-                        
-                        Text("• Creates a virtual network adapter on your iOS device")
-                        Text("• Configures this adapter with user-specified local IP addresses")
-                        Text("• Enables routing between your apps and locally hosted servers")
-                        Text("• Operates entirely within your device's memory")
-                        Text("• Does not modify, intercept, or process any internet traffic")
-                        
-                        Text("This functionality is specifically designed for developers testing iOS applications that need to communicate with locally hosted web or API servers.")
-                            .padding(.top, 10)
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Required Permissions", systemImage: "checkmark.shield").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("StosVPN requires network extension permissions for the sole purpose of creating a virtual network interface on your device.")
-                            .padding(.bottom, 5)
-                        
-                        Text("Apple's Privacy Purpose String:")
-                            .fontWeight(.medium)
-                            .padding(.top, 5)
-                        
-                        Text("\"StosVPN requires network extension permissions to create a local virtual network interface used exclusively for development and testing. This permission is not used to monitor, collect, or transmit any user data.\"")
-                            .italic()
-                            .padding(.horizontal)
-                            .padding(.vertical, 5)
-                        
-                        Text("These permissions are never used to:")
-                            .fontWeight(.medium)
-                            .padding(.top, 5)
-                        
-                        Text("• Monitor network traffic")
-                        Text("• Access your browsing history")
-                        Text("• Read or transmit personal information")
-                        Text("• Track your location or device usage")
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("No Third-Party Sharing", systemImage: "person.2.slash").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("StosVPN does not share data with third parties because:")
-                            .padding(.bottom, 5)
-                        
-                        Text("• We collect absolutely no data")
-                        Text("• The app contains no analytics frameworks")
-                        Text("• No advertising or tracking SDKs are included")
-                        Text("• No external servers are contacted during operation")
-                        Text("• No cookies or other tracking technologies are used")
-                        
-                        Text("All functionality is implemented using Apple's native frameworks, with no third-party services or libraries that could potentially access user data.")
-                            .padding(.top, 10)
-                            .fontWeight(.medium)
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Children's Privacy", systemImage: "person.crop.circle").font(.headline)) {
-                    Text("StosVPN is a developer tool and not intended for use by children under the age of 13. Since we do not collect any personal information from any users, including children, no special provisions are required to comply with children's privacy regulations.")
-                        .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Changes to This Policy", systemImage: "arrow.triangle.2.circlepath").font(.headline)) {
-                    Text("While our commitment to zero data collection will never change, we may update this privacy policy to clarify our practices or reflect changes in functionality. Any updates will be clearly dated and communicated through app updates.")
-                        .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Contact Information", systemImage: "envelope").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("If you have any questions, concerns, or requests regarding this privacy policy or StosVPN, please contact us at:")
-                            .padding(.bottom, 5)
-                        
-                        Text("privacy@stossvpn.com")
-                            .fontWeight(.medium)
-                        
-                        Text("We are committed to addressing any questions or concerns you may have about our privacy practices or this app's functionality.")
-                            .padding(.top, 10)
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Your Rights", systemImage: "person.text.rectangle").font(.headline)) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Although we collect no personal data, you have the right to:")
-                            .padding(.bottom, 5)
-                        
-                        Text("• Request information about our data practices")
-                        Text("• Verify our zero-collection policy")
-                        Text("• Remove the app and all its local configuration at any time")
-                        
-                        Text("Since all configuration is stored locally on your device, uninstalling the app removes all data created by StosVPN.")
-                            .padding(.top, 10)
-                    }
-                    .padding(.vertical)
-                }
-                
-                GroupBox(label: Label("Apple App Store Compliance", systemImage: "apple.logo").font(.headline)) {
-                    Text("This app complies with all Apple App Store Review Guidelines, including guidelines 2.1 and 5.4 regarding data collection and VPN apps. StosVPN is a local development tool that uses VPN technology solely for creating a local network interface without any remote server connections or data collection.")
-                        .padding(.vertical)
-                }
-            }
-            .padding()
-        }
-        .navigationTitle("Privacy Policy")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
