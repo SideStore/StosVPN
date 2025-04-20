@@ -54,12 +54,14 @@ class TunnelManager: ObservableObject {
         Bundle.main.bundleIdentifier!.appending(".TunnelProv")
     }
     
-    enum TunnelStatus: String {
-        case disconnected = "Disconnected"
-        case connecting = "Connecting"
-        case connected = "Connected"
-        case disconnecting = "Disconnecting"
-        case error = "Error"
+    import SwiftUI
+
+    enum TunnelStatus {
+        case disconnected
+        case connecting
+        case connected
+        case disconnecting
+        case error
         
         var color: Color {
             switch self {
@@ -80,7 +82,23 @@ class TunnelManager: ObservableObject {
             case .error: return "exclamationmark.shield.fill"
             }
         }
+        
+        var localizedTitle: String {
+            switch self {
+            case .disconnected:
+                return NSLocalizedString("disconnected", comment: "")
+            case .connecting:
+                return NSLocalizedString("connecting", comment: "")
+            case .connected:
+                return NSLocalizedString("connected", comment: "")
+            case .disconnecting:
+                return NSLocalizedString("disconnecting", comment: "")
+            case .error:
+                return NSLocalizedString("error", comment: "")
+            }
+        }
     }
+
     
     private init() {
         loadTunnelPreferences()
@@ -165,7 +183,7 @@ class TunnelManager: ObservableObject {
         
         let proto = NETunnelProviderProtocol()
         proto.providerBundleIdentifier = self.tunnelBundleId
-        proto.serverAddress = "StosVPN's Local Network Tunnel"
+        proto.serverAddress = NSLocalizedString("server_address_name", comment: "")
         manager.protocolConfiguration = proto
         
         let onDemandRule = NEOnDemandRuleEvaluateConnection()
@@ -423,8 +441,9 @@ struct StatusIndicatorView: View {
             .onChange(of: tunnelManager.tunnelStatus) { _ in
                 updateAnimation()
             }
-            
-            Text(tunnelManager.tunnelStatus == .connected ? "Local tunnel active" : "Local tunnel inactive")
+            Text(tunnelManager.tunnelStatus == .connected ? 
+                NSLocalizedString("local_tunnel_active", comment: "") : 
+                NSLocalizedString("local_tunnel_inactive", comment: ""))
                 .font(.subheadline)
                 .foregroundColor(tunnelManager.tunnelStatus == .connected ? .green : .secondary)
         }
@@ -480,14 +499,15 @@ struct ConnectionButton: View {
     }
     
     private var buttonText: String {
-        if tunnelManager.tunnelStatus == .connected {
-            return "Disconnect"
-        } else if tunnelManager.tunnelStatus == .connecting {
-            return "Connecting..."
-        } else if tunnelManager.tunnelStatus == .disconnecting {
-            return "Disconnecting..."
-        } else {
-            return "Connect"
+        switch tunnelManager.tunnelStatus {
+        case .connected:
+            return NSLocalizedString("disconnect", comment: "")
+        case .connecting:
+            return NSLocalizedString("connecting_ellipsis", comment: "")
+        case .disconnecting:
+            return NSLocalizedString("disconnecting_ellipsis", comment: "")
+        default:
+            return NSLocalizedString("connect", comment: "")
         }
     }
     
@@ -516,33 +536,29 @@ struct ConnectionStatsView: View {
     
     var body: some View {
         VStack(spacing: 25) {
-            Text("Local Tunnel Details")
+            Text("local_tunnel_details")
                 .font(.headline)
                 .foregroundColor(.primary)
-            
             HStack(spacing: 30) {
                 StatItemView(
-                    title: "Time Connected",
+                    title: NSLocalizedString("time_connected", comment: ""),
                     value: formattedTime,
                     icon: "clock.fill"
                 )
-                
                 StatItemView(
-                    title: "Status",
-                    value: "Active",
+                    title: NSLocalizedString("status", comment: ""),
+                    value: NSLocalizedString("active", comment: ""),
                     icon: "checkmark.circle.fill"
                 )
             }
-            
             HStack(spacing: 30) {
                 StatItemView(
-                    title: "Network Interface",
-                    value: "Local",
+                    title: NSLocalizedString("network_interface", comment: ""),
+                    value: NSLocalizedString("local", comment: ""),
                     icon: "network"
                 )
-                
                 StatItemView(
-                    title: "Assigned IP",
+                    title: NSLocalizedString("assigned_ip", comment: ""),
                     value: "10.7.0.1",
                     icon: "number"
                 )
@@ -599,79 +615,83 @@ struct StatItemView: View {
 // MARK: - Updated SettingsView
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedLanguage = 0
     @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
     @AppStorage("TunnelFakeIP") private var fakeIP = "10.7.0.1"
     @AppStorage("TunnelSubnetMask") private var subnetMask = "255.255.255.0"
     @AppStorage("autoConnect") private var autoConnect = false
-    
+
     var body: some View {
         NavigationStack {
             List {
-                Section(header: Text("Connection Settings")) {
-                    Toggle("Auto-connect on Launch", isOn: $autoConnect)
-                    
+                Section(header: Text("connection_settings")) {
+                    Toggle("auto_connect_on_launch", isOn: $autoConnect)
                     NavigationLink(destination: ConnectionLogView()) {
-                        Label("Connection Logs", systemImage: "doc.text")
+                        Label("connection_logs", systemImage: "doc.text")
                     }
                 }
-                
-                Section(header: Text("Network Configuration")) {
+
+                Section(header: Text("network_configuration")) {
                     HStack {
-                        Text("Device IP")
+                        Text("device_ip")
                         Spacer()
-                        TextField("Device IP", text: $deviceIP)
+                        TextField("device_ip", text: $deviceIP)
                             .multilineTextAlignment(.trailing)
                             .foregroundColor(.secondary)
                             .keyboardType(.numbersAndPunctuation)
                     }
-                    
                     HStack {
-                        Text("Tunnel IP")
+                        Text("tunnel_ip")
                         Spacer()
-                        TextField("Tunnel IP", text: $fakeIP)
+                        TextField("tunnel_ip", text: $fakeIP)
                             .multilineTextAlignment(.trailing)
                             .foregroundColor(.secondary)
                             .keyboardType(.numbersAndPunctuation)
                     }
-                    
                     HStack {
-                        Text("Subnet Mask")
+                        Text("subnet_mask")
                         Spacer()
-                        TextField("Subnet Mask", text: $subnetMask)
+                        TextField("subnet_mask", text: $subnetMask)
                             .multilineTextAlignment(.trailing)
                             .foregroundColor(.secondary)
                             .keyboardType(.numbersAndPunctuation)
                     }
                 }
-                
-                Section(header: Text("App Information")) {
+
+                Section(header: Text("app_information")) {
                     Button {
                         UIApplication.shared.open(URL(string: "https://github.com/stossy11/PrivacyPolicy/blob/main/PrivacyPolicy.md")!, options: [:])
                     } label: {
-                        Label("Privacy Policy", systemImage: "lock.shield")
+                        Label("privacy_policy", systemImage: "lock.shield")
                     }
-                    
                     NavigationLink(destination: DataCollectionInfoView()) {
-                        Label("Data Collection Policy", systemImage: "hand.raised.slash")
+                        Label("data_collection_policy", systemImage: "hand.raised.slash")
                     }
-                    
                     HStack {
-                        Text("App Version")
+                        Text("app_version")
                         Spacer()
                         Text("1.1.0")
                             .foregroundColor(.secondary)
                     }
-                    
                     NavigationLink(destination: HelpView()) {
-                        Text("Help & Support")
+                        Text("help_and_support")
                     }
                 }
+
+                Section(header: Text("language")) {
+                    Picker("language", selection: $selectedLanguage) {
+                        Text("english").tag(0)
+                        Text("spanish").tag(1)
+                        Text("italian").tag(2)
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
             }
-            .navigationTitle("Settings")
+            .navigationTitle(Text("settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                    Button("done") {
                         dismiss()
                     }
                 }
@@ -680,49 +700,49 @@ struct SettingsView: View {
     }
 }
 
+
 // MARK: - New Data Collection Info View
 struct DataCollectionInfoView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Data Collection Policy")
+                Text("data_collection_policy_title")
                     .font(.title)
                     .fontWeight(.bold)
                     .padding(.bottom, 10)
                 
-                GroupBox(label: Label("No Data Collection", systemImage: "hand.raised.slash").font(.headline)) {
-                    Text("StosVPN does NOT collect any user data, traffic information, or browsing activity. This app creates a purely local network tunnel that stays entirely on your device.")
+                GroupBox(label: Label("no_data_collection", systemImage: "hand.raised.slash").font(.headline)) {
+                    Text("no_data_collection_description")
                         .padding(.vertical)
                 }
                 
-                GroupBox(label: Label("Local Processing Only", systemImage: "iphone").font(.headline)) {
-                    Text("All network traffic and configurations are processed locally on your device. No information ever leaves your device or is transmitted over the internet.")
+                GroupBox(label: Label("local_processing_only", systemImage: "iphone").font(.headline)) {
+                    Text("local_processing_only_description")
                         .padding(.vertical)
                 }
                 
-                GroupBox(label: Label("No Third-Party Sharing", systemImage: "person.2.slash").font(.headline)) {
-                    Text("Since we collect no data, there is no data shared with third parties. We have no analytics, tracking, or data collection mechanisms in this app.")
+                GroupBox(label: Label("no_third_party_sharing", systemImage: "person.2.slash").font(.headline)) {
+                    Text("no_third_party_sharing_description")
                         .padding(.vertical)
                 }
                 
-                GroupBox(label: Label("Why Use Network Permissions", systemImage: "network").font(.headline)) {
-                    Text("StosVPN requires network extension permissions to create a local network interface on your device. This is used exclusively for local development and testing purposes, such as connecting to local web servers for development.")
+                GroupBox(label: Label("why_use_network_permissions", systemImage: "network").font(.headline)) {
+                    Text("why_use_network_permissions_description")
                         .padding(.vertical)
                 }
                 
-                GroupBox(label: Label("Our Promise", systemImage: "checkmark.seal").font(.headline)) {
-                    Text("We're committed to privacy and transparency. This app is designed for developers to test and connect to local servers on their device without any privacy concerns.")
+                GroupBox(label: Label("our_promise", systemImage: "checkmark.seal").font(.headline)) {
+                    Text("our_promise_description")
                         .padding(.vertical)
                 }
             }
             .padding()
         }
-        .navigationTitle("Data Collection")
+        .navigationTitle(Text("data_collection_policy_nav"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Updated ConnectionLogView
 struct ConnectionLogView: View {
     @StateObject var logger = VPNLogger.shared
     var body: some View {
@@ -730,115 +750,98 @@ struct ConnectionLogView: View {
             Text(log)
                 .font(.system(.body, design: .monospaced))
         }
-        .navigationTitle("Logs")
+        .navigationTitle(Text("logs_nav"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
-// MARK: - Updated HelpView
 struct HelpView: View {
     var body: some View {
         List {
-            Section(header: Text("Frequently Asked Questions")) {
-                NavigationLink("What does this app do?") {
+            Section(header: Text("faq_header")) {
+                NavigationLink("faq_q1") {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("StosVPN creates a local network interface that can be used for development and testing purposes. It does not route traffic through any external servers - everything stays on your device.")
+                        Text("faq_q1_a1")
                             .padding(.bottom, 10)
-                        
-                        Text("Common use cases include:")
+                        Text("faq_common_use_cases")
                             .fontWeight(.medium)
-                        
-                        Text("• Testing web applications with local web servers")
-                        Text("• Developing and debugging network-related features")
-                        Text("• Accessing locally hosted development environments")
-                        Text("• Testing applications that require specific network configurations")
+                        Text("faq_case1")
+                        Text("faq_case2")
+                        Text("faq_case3")
+                        Text("faq_case4")
                     }
                     .padding()
                 }
-                
-                NavigationLink("Is this a traditional VPN?") {
+                NavigationLink("faq_q2") {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("No, StosVPN is NOT a traditional VPN service. It does not:")
+                        Text("faq_q2_a1")
                             .padding(.bottom, 10)
                             .fontWeight(.medium)
-                        
-                        Text("• Route your traffic through external servers")
-                        Text("• Provide privacy or anonymity for internet browsing")
-                        Text("• Connect to remote VPN servers")
-                        Text("• Encrypt or route your internet traffic")
-                        
-                        Text("StosVPN only creates a local network interface on your device to help developers connect to local services and servers for testing and development purposes.")
+                        Text("faq_q2_point1")
+                        Text("faq_q2_point2")
+                        Text("faq_q2_point3")
+                        Text("faq_q2_point4")
+                        Text("faq_q2_a2")
                             .padding(.top, 10)
                     }
                     .padding()
                 }
-                
-                NavigationLink("Why does the connection fail?") {
+                NavigationLink("faq_q3") {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("Connection failures could be due to system permission issues, configuration errors, or iOS restrictions.")
+                        Text("faq_q3_a1")
                             .padding(.bottom, 10)
-                        
-                        Text("Troubleshooting steps:")
+                        Text("faq_troubleshoot_header")
                             .fontWeight(.medium)
-                        
-                        Text("• Ensure you've approved the network extension permission")
-                        Text("• Try restarting the app")
-                        Text("• Check if your IP configuration is valid")
-                        Text("• Restart your device if issues persist")
+                        Text("faq_troubleshoot1")
+                        Text("faq_troubleshoot2")
+                        Text("faq_troubleshoot3")
+                        Text("faq_troubleshoot4")
                     }
                     .padding()
                 }
-                
-                NavigationLink("Who is this app for?") {
+                NavigationLink("faq_q4") {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("StosVPN is primarily designed for:")
+                        Text("faq_q4_intro")
                             .fontWeight(.medium)
                             .padding(.bottom, 10)
-                        
-                        Text("• Developers testing local web servers")
-                        Text("• App developers testing network features")
-                        Text("• QA engineers testing applications in isolated network environments")
-                        Text("• Anyone who needs to access locally hosted services on their iOS device")
-                        
-                        Text("This app is available to the general public and is especially useful for developers who need to test applications with network features on iOS devices.")
+                        Text("faq_q4_case1")
+                        Text("faq_q4_case2")
+                        Text("faq_q4_case3")
+                        Text("faq_q4_case4")
+                        Text("faq_q4_conclusion")
                             .padding(.top, 10)
                     }
                     .padding()
                 }
             }
-            
-            Section(header: Text("Business Model Information")) {
-                NavigationLink("How does StosVPN work?") {
+            Section(header: Text("business_model_header")) {
+                NavigationLink("biz_q1") {
                     VStack(alignment: .leading, spacing: 15) {
-                        Text("StosVPN is a completely free app available to the general public. There are no paid features, subscriptions, or in-app purchases.")
+                        Text("biz_q1_a1")
                             .padding(.bottom, 10)
-                        
-                        Text("Key points about our business model:")
+                        Text("biz_key_points_header")
                             .fontWeight(.medium)
-                        
-                        Text("• The app is not restricted to any specific company or group")
-                        Text("• Anyone can download and use the app from the App Store")
-                        Text("• No account creation is required to use the app")
-                        Text("• All features are available to all users free of charge")
-                        Text("• The app is developed and maintained as an open utility for the iOS development community")
+                        Text("biz_point1")
+                        Text("biz_point2")
+                        Text("biz_point3")
+                        Text("biz_point4")
+                        Text("biz_point5")
                     }
                     .padding()
                 }
             }
-            
-            Section(header: Text("App Information")) {
+            Section(header: Text("app_info_header")) {
                 HStack {
                     Image(systemName: "exclamationmark.shield")
-                    Text("Requires iOS 16.0 or later")
+                    Text("requires_ios")
                 }
-                
                 HStack {
                     Image(systemName: "lock.shield")
-                    Text("Uses Apple's Network Extension APIs")
+                    Text("uses_network_extension")
                 }
             }
         }
-        .navigationTitle("Help & Support")
+        .navigationTitle(Text("help_and_support_nav"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -847,34 +850,32 @@ struct SetupView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
     @State private var currentPage = 0
-    
     let pages = [
         SetupPage(
-            title: "Welcome to StosVPN",
-            description: "A simple local network tunnel for developers",
+            title: "setup_welcome_title",
+            description: "setup_welcome_description",
             imageName: "checkmark.shield.fill",
-            details: "StosVPN creates a local network interface on your device for development, testing, and accessing local servers. This app does NOT collect any user data or route traffic through external servers."
+            details: "setup_welcome_details"
         ),
         SetupPage(
-            title: "Why Use StosVPN?",
-            description: "Perfect for iOS developers",
+            title: "setup_why_title",
+            description: "setup_why_description",
             imageName: "person.2.fill",
-            details: "• Access local web servers and development environments\n• Test applications that require specific network configurations\n• Connect to local network services without complex setup\n• Create isolated network environments for testing"
+            details: "setup_why_details"
         ),
         SetupPage(
-            title: "Easy to Use",
-            description: "Just one tap to connect",
+            title: "setup_easy_title",
+            description: "setup_easy_description",
             imageName: "hand.tap.fill",
-            details: "StosVPN is designed to be simple and straightforward. Just tap the connect button to establish a local network tunnel with pre-configured settings that work for most developer testing needs."
+            details: "setup_easy_details"
         ),
         SetupPage(
-            title: "Privacy Focused",
-            description: "Your data stays on your device",
+            title: "setup_privacy_title",
+            description: "setup_privacy_description",
             imageName: "lock.shield.fill",
-            details: "StosVPN creates a local tunnel that doesn't route traffic through external servers. All network traffic remains on your device, ensuring your privacy and security. No data is collected or shared with third parties."
+            details: "setup_privacy_details"
         )
     ]
-    
     var body: some View {
         NavigationStack {
             VStack {
@@ -885,64 +886,41 @@ struct SetupView: View {
                     }
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
-                
                 Spacer()
-                
                 if currentPage == pages.count - 1 {
                     Button {
                         hasNotCompletedSetup = false
                         dismiss()
                     } label: {
-                        Text("Get Started")
+                        Text("setup_get_started")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .frame(height: 50)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.blue]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
                             .cornerRadius(10)
                             .padding(.horizontal)
                     }
                     .padding(.bottom)
                 } else {
                     Button {
-                        withAnimation {
-                            currentPage += 1
-                        }
+                        withAnimation { currentPage += 1 }
                     } label: {
-                        Text("Next")
+                        Text("setup_next")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .frame(height: 50)
                             .frame(maxWidth: .infinity)
-                            .background(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [Color.blue.opacity(0.8), Color.blue]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .foregroundColor(.white)
                             .cornerRadius(10)
                             .padding(.horizontal)
                     }
                     .padding(.bottom)
                 }
             }
-            .navigationTitle("Setup")
+            .navigationTitle(Text("setup_nav"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Skip") {
-                        hasNotCompletedSetup = false
-                        dismiss()
-                    }
+                    Button("setup_skip") { hasNotCompletedSetup = false; dismiss() }
                 }
             }
         }
