@@ -615,7 +615,7 @@ struct StatItemView: View {
 // MARK: - Updated SettingsView
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedLanguage = 0
+    @AppStorage("selectedLanguage") private var selectedLanguage = Locale.current.languageCode ?? "en"
     @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
     @AppStorage("TunnelFakeIP") private var fakeIP = "10.7.0.1"
     @AppStorage("TunnelSubnetMask") private var subnetMask = "255.255.255.0"
@@ -680,11 +680,14 @@ struct SettingsView: View {
 
                 Section(header: Text("language")) {
                     Picker("language", selection: $selectedLanguage) {
-                        Text("english").tag(0)
-                        Text("spanish").tag(1)
-                        Text("italian").tag(2)
+                        Text("English").tag(0)
+                        Text("Spanish").tag(1)
+                        Text("Italian").tag(2)
                     }
-                    .pickerStyle(MenuPickerStyle())
+                    .onChange(of: selectedLanguage) { newValue in
+                        let languageCode = ["en", "es", "it"][newValue]
+                        LanguageManager().updateLanguage(to: languageCode)
+                    }
                 }
             }
             .navigationTitle(Text("settings"))
@@ -964,6 +967,24 @@ struct SetupPageView: View {
             Spacer()
         }
         .padding()
+    }
+}
+
+class LanguageManager: ObservableObject {
+    @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
+    
+    private let supportedLanguages = ["en", "es", "it"]
+    
+    func updateLanguage(to languageCode: String) {
+        if supportedLanguages.contains(languageCode) {
+            currentLanguage = languageCode
+            UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+        } else {
+            currentLanguage = "en" //FALLBACK TO DEFAULT LANGUAGE
+            UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+            UserDefaults.standard.synchronize()
+        }
     }
 }
 
