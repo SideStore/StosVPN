@@ -45,14 +45,14 @@ jobs:
                   fi
                   echo "Found App Extension at: $APPEX_PATH"
                   # Use the specific entitlements for the extension
-                  ldid -S"${GITHUB_WORKSPACE}/TunnelProv/TunnelProv.entitlements" "$APPEX_PATH/$(basename "$APPEX_PATH" .appex)"
+                  ldid -S"${GITHUB_WORKSPACE}/Entitlements/TunnelProv.xml" "$APPEX_PATH/$(basename "$APPEX_PATH" .appex)"
                   echo "Signed App Extension."
 
             - name: Sign Main App Bundle
               run: |
                   APP_BINARY_PATH="Payload/StosVPN.app/StosVPN"
                   # Use the specific entitlements for the main app
-                  ldid -S"${GITHUB_WORKSPACE}/StosVPN/StosVPN.entitlements" "$APP_BINARY_PATH"
+                  ldid -S"${GITHUB_WORKSPACE}/Entitlements/StosVPN.xml" "$APP_BINARY_PATH"
                   echo "Signed Main App Bundle."
 
             - name: Create IPA
