@@ -1,0 +1,23 @@
+// Configuration settings file format documentation can be found at:
+// https://help.apple.com/xcode/#/dev745c5c974
+
+MARKETING_VERSION = 1.1.1
+CURRENT_PROJECT_VERSION = 1
+
+// Vars to be overwritten by `CodeSigning.xcconfig` if exists
+DEVELOPMENT_TEAM = S32Z3HMYVQ
+ORG_IDENTIFIER = com.stossy11
+
+// Codesigning settings defined optionally, see `CodeSigning.xcconfig.example`
+#include? "CodeSigning.xcconfig"
+
+ORG_PREFIX = $(ORG_IDENTIFIER)
+
+PRODUCT_BUNDLE_IDENTIFIER =  $(ORG_PREFIX).StosVPN
+
+TUNNEL_NAME = TunnelProv
+
+TUNNEL_BUNDLE_IDENTIFIER = $(PRODUCT_BUNDLE_IDENTIFIER).$(TUNNEL_NAME)
+
+// Mute warnings about duplicate classes in AuthKit and AuthUIKit
+DEBUG_DUPLICATE_CLASSES = NO

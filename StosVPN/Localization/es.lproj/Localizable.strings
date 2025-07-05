@@ -96,7 +96,7 @@
 "biz_point4" = "• Todas las funciones son gratuitas para todos los usuarios";
 "biz_point5" = "• La app es desarrollada y mantenida como una utilidad abierta para la comunidad de iOS";
 "app_info_header" = "Información de la App";
-"requires_ios" = "Requiere iOS 16.0 o superior";
+"requires_ios" = "Requiere iOS 14.0 o superior";
 "uses_network_extension" = "Usa la API de Extensión de Red de Apple";
 "help_and_support_nav" = "Ayuda & Soporte";
 "setup_welcome_title" = "Bienvenido a StosVPN";
