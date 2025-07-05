@@ -1,3 +1,4 @@
+CodeSigning.xcconfig
 *.ipa
 /build
 

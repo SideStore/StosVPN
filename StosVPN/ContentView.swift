@@ -9,6 +9,12 @@ import SwiftUI
 import Foundation
 import NetworkExtension
 
+import NavigationBackport
+
+extension Bundle {
+    var shortVersion: String { object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0" }
+    var tunnelBundleID: String { bundleIdentifier!.appending(".TunnelProv") }
+}
 
 // MARK: - Logging Utility
 class VPNLogger: ObservableObject {
@@ -50,12 +56,6 @@ class TunnelManager: ObservableObject {
         UserDefaults.standard.string(forKey: "TunnelSubnetMask") ?? "255.255.255.0"
     }
     
-    private var tunnelBundleId: String {
-        Bundle.main.bundleIdentifier!.appending(".TunnelProv")
-    }
-    
-    import SwiftUI
-
     enum TunnelStatus {
         case disconnected
         case connecting
@@ -123,7 +123,7 @@ class TunnelManager: ObservableObject {
                     // Look specifically for StosVPN manager
                     for manager in managers {
                         if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol,
-                           proto.providerBundleIdentifier == self.tunnelBundleId {
+                           proto.providerBundleIdentifier == Bundle.main.tunnelBundleID {
                             self.vpnManager = manager
                             self.updateTunnelStatus(from: manager.connection.status)
                             VPNLogger.shared.log("Loaded existing StosVPN tunnel configuration")
@@ -173,7 +173,7 @@ class TunnelManager: ObservableObject {
                 self.tunnelStatus = .error
             }
             
-            VPNLogger.shared.log("StosVPN status updated: \(self.tunnelStatus.rawValue)")
+            VPNLogger.shared.log("StosVPN status updated: \(self.tunnelStatus)")
         }
     }
     
@@ -182,7 +182,7 @@ class TunnelManager: ObservableObject {
         manager.localizedDescription = "StosVPN"
         
         let proto = NETunnelProviderProtocol()
-        proto.providerBundleIdentifier = self.tunnelBundleId
+        proto.providerBundleIdentifier = Bundle.main.tunnelBundleID
         proto.serverAddress = NSLocalizedString("server_address_name", comment: "")
         manager.protocolConfiguration = proto
         
@@ -248,7 +248,7 @@ class TunnelManager: ObservableObject {
             guard let self = self else { return }
             
             if let activeManager = activeManager,
-               (activeManager.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier != self.tunnelBundleId {
+               (activeManager.protocolConfiguration as? NETunnelProviderProtocol)?.providerBundleIdentifier != Bundle.main.tunnelBundleID {
                 VPNLogger.shared.log("Disconnecting existing VPN connection before starting StosVPN")
                 
                 // Set a flag to start StosVPN after disconnection
@@ -359,7 +359,7 @@ struct ContentView: View {
     @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
     
     var body: some View {
-        NavigationStack {
+        NBNavigationStack {
             VStack(spacing: 30) {
                 Spacer()
                 
@@ -430,7 +430,7 @@ struct StatusIndicatorView: View {
                         .font(.system(size: 50))
                         .foregroundColor(tunnelManager.tunnelStatus.color)
                     
-                    Text(tunnelManager.tunnelStatus.rawValue)
+                    Text(tunnelManager.tunnelStatus.localizedTitle)
                         .font(.headline)
                         .foregroundColor(.primary)
                 }
@@ -614,7 +614,7 @@ struct StatItemView: View {
 
 // MARK: - Updated SettingsView
 struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) var presentationMode
     @AppStorage("selectedLanguage") private var selectedLanguage = Locale.current.languageCode ?? "en"
     @AppStorage("TunnelDeviceIP") private var deviceIP = "10.7.0.0"
     @AppStorage("TunnelFakeIP") private var fakeIP = "10.7.0.1"
@@ -622,7 +622,7 @@ struct SettingsView: View {
     @AppStorage("autoConnect") private var autoConnect = false
 
     var body: some View {
-        NavigationStack {
+        NBNavigationStack {
             List {
                 Section(header: Text("connection_settings")) {
                     Toggle("auto_connect_on_launch", isOn: $autoConnect)
@@ -670,7 +670,7 @@ struct SettingsView: View {
                     HStack {
                         Text("app_version")
                         Spacer()
-                        Text("1.1.0")
+                        Text(Bundle.main.shortVersion)
                             .foregroundColor(.secondary)
                     }
                     NavigationLink(destination: HelpView()) {
@@ -680,13 +680,13 @@ struct SettingsView: View {
 
                 Section(header: Text("language")) {
                     Picker("language", selection: $selectedLanguage) {
-                        Text("English").tag(0)
-                        Text("Spanish").tag(1)
-                        Text("Italian").tag(2)
+                        Text("English").tag("en")
+                        Text("Spanish").tag("es")
+                        Text("Italian").tag("it")
                     }
                     .onChange(of: selectedLanguage) { newValue in
-                        let languageCode = ["en", "es", "it"][newValue]
-                        LanguageManager().updateLanguage(to: languageCode)
+                        let languageCode = newValue
+                        LanguageManager.shared.updateLanguage(to: languageCode)
                     }
                 }
             }
@@ -701,6 +701,10 @@ struct SettingsView: View {
             }
         }
     }
+
+    private func dismiss() {
+        presentationMode.wrappedValue.dismiss()
+      }
 }
 
 
@@ -779,7 +783,7 @@ struct HelpView: View {
                     VStack(alignment: .leading, spacing: 15) {
                         Text("faq_q2_a1")
                             .padding(.bottom, 10)
-                            .fontWeight(.medium)
+                            .font(.headline)
                         Text("faq_q2_point1")
                         Text("faq_q2_point2")
                         Text("faq_q2_point3")
@@ -794,7 +798,7 @@ struct HelpView: View {
                         Text("faq_q3_a1")
                             .padding(.bottom, 10)
                         Text("faq_troubleshoot_header")
-                            .fontWeight(.medium)
+                            .font(.headline)
                         Text("faq_troubleshoot1")
                         Text("faq_troubleshoot2")
                         Text("faq_troubleshoot3")
@@ -805,7 +809,7 @@ struct HelpView: View {
                 NavigationLink("faq_q4") {
                     VStack(alignment: .leading, spacing: 15) {
                         Text("faq_q4_intro")
-                            .fontWeight(.medium)
+                            .font(.headline)
                             .padding(.bottom, 10)
                         Text("faq_q4_case1")
                         Text("faq_q4_case2")
@@ -823,7 +827,7 @@ struct HelpView: View {
                         Text("biz_q1_a1")
                             .padding(.bottom, 10)
                         Text("biz_key_points_header")
-                            .fontWeight(.medium)
+                            .font(.headline)
                         Text("biz_point1")
                         Text("biz_point2")
                         Text("biz_point3")
@@ -850,7 +854,7 @@ struct HelpView: View {
 }
 
 struct SetupView: View {
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) var presentationMode
     @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
     @State private var currentPage = 0
     let pages = [
@@ -880,7 +884,7 @@ struct SetupView: View {
         )
     ]
     var body: some View {
-        NavigationStack {
+        NBNavigationStack {
             VStack {
                 TabView(selection: $currentPage) {
                     ForEach(0..<pages.count, id: \.self) { index in
@@ -928,6 +932,10 @@ struct SetupView: View {
             }
         }
     }
+
+    private func dismiss() {
+        presentationMode.wrappedValue.dismiss()
+      }
 }
 
 struct SetupPage {
@@ -971,6 +979,8 @@ struct SetupPageView: View {
 }
 
 class LanguageManager: ObservableObject {
+    static let shared = LanguageManager()
+
     @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
     
     private let supportedLanguages = ["en", "es", "it"]
