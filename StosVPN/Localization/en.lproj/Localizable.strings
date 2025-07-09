@@ -99,6 +99,8 @@
 "requires_ios" = "Requires iOS 14.0 or later";
 "uses_network_extension" = "Uses Apple Network Extension APIs";
 "help_and_support_nav" = "Help & Support";
+
+/*MARK: Welcome Screen*/
 "setup_welcome_title" = "Welcome to StosVPN";
 "setup_welcome_description" = "A simple local network tunnel for developers";
 "setup_welcome_details" = "StosVPN creates a local network interface for development, testing, and access to local servers. This app DOES NOT collect user data or route traffic through external servers.";

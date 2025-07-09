@@ -1,4 +1,4 @@
-/* MARK: Pantalla de inicio */
+/* MARK: Main Screen */
 
 "disconnected" = "Desconectado";
 "connecting" = "Conectando";
@@ -23,7 +23,7 @@
 "local" = "Local";
 "assigned_ip" = "IP Asignada";
 
-/* MARK: Configuración */
+/* MARK: Settings */
 
 "connection_settings" = "Configuración de Conexión";
 "auto_connect_on_launch" = "Conectar automáticamente al iniciar";
@@ -99,6 +99,8 @@
 "requires_ios" = "Requiere iOS 14.0 o superior";
 "uses_network_extension" = "Usa la API de Extensión de Red de Apple";
 "help_and_support_nav" = "Ayuda & Soporte";
+
+/*MARK: Welcome Screen*/
 "setup_welcome_title" = "Bienvenido a StosVPN";
 "setup_welcome_description" = "Un simple túnel de red local para desarrolladores";
 "setup_welcome_details" = "StosVPN crea una interfaz de red local para el desarrollo, pruebas y acceso a servidores locales. Esta app NO recopila datos de usuario ni enruta el tráfico a través de servidores externos.";

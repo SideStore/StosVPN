@@ -859,28 +859,28 @@ struct SetupView: View {
     @State private var currentPage = 0
     let pages = [
         SetupPage(
-            title: "setup_welcome_title",
-            description: "setup_welcome_description",
+            title: NSLocalizedString("setup_welcome_title"),
+            description: NSLocalizedString("setup_welcome_description"),
             imageName: "checkmark.shield.fill",
-            details: "setup_welcome_details"
+            details: NSLocalizedString("setup_welcome_details")
         ),
         SetupPage(
-            title: "setup_why_title",
-            description: "setup_why_description",
+            title: NSLocalizedString("setup_why_title"),
+            description: NSLocalizedString("setup_why_description"),
             imageName: "person.2.fill",
-            details: "setup_why_details"
+            details: NSLocalizedString("setup_why_details")
         ),
         SetupPage(
-            title: "setup_easy_title",
-            description: "setup_easy_description",
+            title: NSLocalizedString("setup_easy_title"),
+            description: NSLocalizedString("setup_easy_description"),
             imageName: "hand.tap.fill",
-            details: "setup_easy_details"
+            details: NSLocalizedString("setup_easy_details")
         ),
         SetupPage(
-            title: "setup_privacy_title",
-            description: "setup_privacy_description",
+            title: NSLocalizedString("setup_privacy_title"),
+            description: NSLocalizedString("setup_privacy_description"),
             imageName: "lock.shield.fill",
-            details: "setup_privacy_details"
+            details: NSLocalizedString("setup_privacy_details")
         )
     ]
     var body: some View {
@@ -982,7 +982,6 @@ class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
 
     @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
-    
     private let supportedLanguages = ["en", "es", "it"]
     
     func updateLanguage(to languageCode: String) {
@@ -990,6 +989,7 @@ class LanguageManager: ObservableObject {
             currentLanguage = languageCode
             UserDefaults.standard.set([languageCode], forKey: "AppleLanguages")
             UserDefaults.standard.synchronize()
+            didChangeLanguage = true
         } else {
             currentLanguage = "en" //FALLBACK TO DEFAULT LANGUAGE
             UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
