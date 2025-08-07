@@ -983,7 +983,7 @@ class LanguageManager: ObservableObject {
 
     @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
     
-    private let supportedLanguages = ["en", "es", "it"]
+    private let supportedLanguages = ["en", "es", "it", "pl"]
     
     func updateLanguage(to languageCode: String) {
         if supportedLanguages.contains(languageCode) {
