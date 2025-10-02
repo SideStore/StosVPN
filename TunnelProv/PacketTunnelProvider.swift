@@ -33,68 +33,31 @@ class PacketTunnelProvider: NEPacketTunnelProvider {
         settings.ipv4Settings = ipv4
         
         setTunnelNetworkSettings(settings) { error in
-            if error == nil {
-                self.readPackets()
-            }
-            completionHandler(error)
+            guard error == nil else { return completionHandler(error) }
+            self.setPackets()
+            completionHandler(nil)
         }
     }
     
-    override func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {
-        completionHandler()
-    }
-    
-    override func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)?) {
-        completionHandler?(messageData)
-    }
-    
-    override func sleep(completionHandler: @escaping () -> Void) {
-        completionHandler()
-    }
-    
-    override func wake() {}
-    
-    private func readPackets() {
-        packetFlow.readPackets { packets, protocols in
-            var output = [Data](repeating: Data(), count: packets.count)
-            
-            for (i, packet) in packets.enumerated() {
-                guard protocols[i].int32Value == AF_INET, packet.count >= 20 else {
-                    output[i] = packet
-                    continue
+    func setPackets() {
+        packetFlow.readPackets { [self] packets, protocols in
+            let fakeip = self.fakeIpValue
+            let deviceip = self.deviceIpValue
+            var modified = packets
+            for i in modified.indices where protocols[i].int32Value == AF_INET && modified[i].count >= 20 {
+                modified[i].withUnsafeMutableBytes { bytes in
+                    guard let ptr = bytes.baseAddress?.assumingMemoryBound(to: UInt32.self) else { return }
+                    let src = UInt32(bigEndian: ptr[3])
+                    let dst = UInt32(bigEndian: ptr[4])
+                    if src == deviceip { ptr[3] = fakeip.bigEndian }
+                    if dst == fakeip { ptr[4] = deviceip.bigEndian }
                 }
-                
-                output[i] = self.processPacket(packet)
             }
-            
-            self.packetFlow.writePackets(output, withProtocols: protocols)
-            self.readPackets()
+            self.packetFlow.writePackets(modified, withProtocols: protocols)
+            setPackets()
         }
     }
-    
-    private func processPacket(_ packet: Data) -> Data {
-        var bytes = [UInt8](packet)
-        
-        let srcIP = UInt32(bigEndian: bytes.withUnsafeBytes { $0.load(fromByteOffset: 12, as: UInt32.self) })
-        let dstIP = UInt32(bigEndian: bytes.withUnsafeBytes { $0.load(fromByteOffset: 16, as: UInt32.self) })
-        
-        if srcIP == deviceIpValue {
-            let replacement = fakeIpValue.bigEndian
-            withUnsafeBytes(of: replacement) { bytes.replaceSubrange(12..<16, with: $0) }
-        }
-        if dstIP == fakeIpValue {
-            let replacement = deviceIpValue.bigEndian
-            withUnsafeBytes(of: replacement) { bytes.replaceSubrange(16..<20, with: $0) }
-        }
-        
-        bytes.swapAt(12, 16)
-        bytes.swapAt(13, 17)
-        bytes.swapAt(14, 18)
-        bytes.swapAt(15, 19)
-        
-        return Data(bytes)
-    }
-    
+
     private func ipToUInt32(_ ipString: String) -> UInt32 {
         let components = ipString.split(separator: ".")
         guard components.count == 4,
