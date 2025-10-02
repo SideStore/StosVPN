@@ -45,6 +45,9 @@
 "settings" = "Ustawienia";
 "done" = "Gotowe";
 
+"warning_alert" = "Uwaga";
+"warning_message" = "Zmiana ustawień IP tunelu może zakłócić połączenie sieciowe. Kontynuuj tylko wtedy, gdy jesteś pewien tego, co robisz.";
+"understand_button" = "Rozumiem";
 "data_collection_policy_title" = "Polityka zbierania danych";
 "no_data_collection" = "Brak zbierania danych";
 "no_data_collection_description" = "StosVPN NIE zbiera danych użytkownika, informacji o ruchu ani aktywności w przeglądarce. Aplikacja tworzy lokalny tunel sieciowy, który działa wyłącznie na Twoim urządzeniu.";
