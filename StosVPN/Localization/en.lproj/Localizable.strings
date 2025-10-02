@@ -43,6 +43,9 @@
 "italian" = "Italian";
 "settings" = "Settings";
 "done" = "Done";
+"warning_alert" = "Warning";
+"warning_message" = "Changing tunnel IP settings can disrupt your network connection. Proceed only if you are sure of what you are doing.";
+"understand_button" = "I Understand";
 
 "data_collection_policy_title" = "Data Collection Policy";
 "no_data_collection" = "No Data Collection";

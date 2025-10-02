@@ -43,6 +43,9 @@
 "italian"                  = "Italiano";
 "settings"                 = "Impostazioni";
 "done"                     = "Fine";
+"warning_alert"            = "Avviso";
+"warning_message"          = "La modifica delle impostazioni IP del tunnel può interrompere la connessione di rete. Procedi solo se sei sicuro di quello che stai facendo.";
+"understand_button"        = "Ho capito";
 
 "data_collection_policy_title"               = "Politica di Raccolta Dati";
 "no_data_collection"                         = "Nessuna Raccolta Dati";

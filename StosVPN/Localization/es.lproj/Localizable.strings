@@ -43,6 +43,9 @@
 "italian" = "Italiano";
 "settings" = "Configuración";
 "done" = "Hecho";
+"warning_alert" = "Advertencia";
+"warning_message" = "Cambiar la configuración de la IP del túnel puede interrumpir tu conexión de red. Procede solo si estás seguro de lo que haces.";
+"understand_button" = "Entiendo";
 
 "data_collection_policy_title" = "Política de Recopilación de Datos";
 "no_data_collection" = "No Recopilación de Datos";
