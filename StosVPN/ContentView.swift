@@ -533,7 +533,7 @@ struct ContentView: View {
             }
             .padding()
             .navigationTitle("StosVPN")
-            .navigationBarTitleDisplayMode(.inline)
+            .tvOSNavigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -556,6 +556,17 @@ struct ContentView: View {
                 SetupView()
             }
         }
+    }
+}
+
+extension View {
+    @ViewBuilder
+    func tvOSNavigationBarTitleDisplayMode(_ displayMode: NavigationBarItem.TitleDisplayMode) -> some View {
+        #if os(iOS)
+        self.navigationBarTitleDisplayMode(displayMode)
+        #else
+        self
+        #endif
     }
 }
 
@@ -776,6 +787,7 @@ struct SettingsView: View {
     @AppStorage("autoConnect") private var autoConnect = false
     @AppStorage("shownTunnelAlert") private var shownTunnelAlert = false
     @StateObject private var tunnelManager = TunnelManager.shared
+    @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
 
     @State private var showNetworkWarning = false
     
@@ -843,7 +855,7 @@ struct SettingsView: View {
                 )
             }
             .navigationTitle(Text("settings"))
-            .navigationBarTitleDisplayMode(.inline)
+            .tvOSNavigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("done") {
@@ -920,7 +932,7 @@ struct DataCollectionInfoView: View {
             .padding()
         }
         .navigationTitle(Text("data_collection_policy_nav"))
-        .navigationBarTitleDisplayMode(.inline)
+        .tvOSNavigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -932,7 +944,7 @@ struct ConnectionLogView: View {
                 .font(.system(.body, design: .monospaced))
         }
         .navigationTitle(Text("logs_nav"))
-        .navigationBarTitleDisplayMode(.inline)
+        .tvOSNavigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -1023,7 +1035,7 @@ struct HelpView: View {
             }
         }
         .navigationTitle(Text("help_and_support_nav"))
-        .navigationBarTitleDisplayMode(.inline)
+        .tvOSNavigationBarTitleDisplayMode(.inline)
     }
 }
 
@@ -1078,6 +1090,8 @@ struct SetupView: View {
                             .fontWeight(.semibold)
                             .frame(height: 50)
                             .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
                             .cornerRadius(10)
                             .padding(.horizontal)
                     }
@@ -1091,14 +1105,17 @@ struct SetupView: View {
                             .fontWeight(.semibold)
                             .frame(height: 50)
                             .frame(maxWidth: .infinity)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
                             .cornerRadius(10)
                             .padding(.horizontal)
                     }
                     .padding(.bottom)
                 }
+
             }
             .navigationTitle(Text("setup_nav"))
-            .navigationBarTitleDisplayMode(.inline)
+            .tvOSNavigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("setup_skip") { hasNotCompletedSetup = false; dismiss() }
@@ -1123,25 +1140,25 @@ struct SetupPageView: View {
     let page: SetupPage
     
     var body: some View {
-        VStack(spacing: 30) {
+        VStack(spacing: tvOSSpacing) {
             Image(systemName: page.imageName)
-                .font(.system(size: 80))
+                .font(.system(size: tvOSImageSize))
                 .foregroundColor(.blue)
-                .padding(.top, 50)
+                .padding(.top, tvOSTopPadding)
             
             Text(page.title)
-                .font(.title)
+                .font(tvOSTitleFont)
                 .fontWeight(.bold)
                 .multilineTextAlignment(.center)
             
             Text(page.description)
-                .font(.headline)
+                .font(tvOSDescriptionFont)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             
             ScrollView {
                 Text(page.details)
-                    .font(.body)
+                    .font(tvOSBodyFont)
                     .multilineTextAlignment(.leading)
                     .padding(.horizontal)
             }
@@ -1150,7 +1167,57 @@ struct SetupPageView: View {
         }
         .padding()
     }
+    
+    // MARK: - Conditional sizes for tvOS
+    private var tvOSImageSize: CGFloat {
+        #if os(tvOS)
+        return 60
+        #else
+        return 80
+        #endif
+    }
+    
+    private var tvOSTopPadding: CGFloat {
+        #if os(tvOS)
+        return 30
+        #else
+        return 50
+        #endif
+    }
+    
+    private var tvOSSpacing: CGFloat {
+        #if os(tvOS)
+        return 20
+        #else
+        return 30
+        #endif
+    }
+    
+    private var tvOSTitleFont: Font {
+        #if os(tvOS)
+        return .headline //.system(size: 35).bold()
+        #else
+        return .title
+        #endif
+    }
+    
+    private var tvOSDescriptionFont: Font {
+        #if os(tvOS)
+        return .subheadline
+        #else
+        return .headline
+        #endif
+    }
+    
+    private var tvOSBodyFont: Font {
+        #if os(tvOS)
+        return .system(size: 18).bold()
+        #else
+        return .body
+        #endif
+    }
 }
+
 
 class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
@@ -1171,6 +1238,54 @@ class LanguageManager: ObservableObject {
         }
     }
 }
+
+#if os(tvOS)
+@ViewBuilder
+func GroupBox<Content: View>(
+    label: some View,
+    @ViewBuilder content: @escaping () -> Content
+) -> some View {
+    #if os(tvOS)
+    tvOSGroupBox(label: {
+        label
+    }, content: content)
+    #else
+    SwiftUI.GroupBox(label: label, content: content)
+    #endif
+}
+
+struct tvOSGroupBox<Label: View, Content: View>: View {
+    @ViewBuilder let label: () -> Label
+    @ViewBuilder let content: () -> Content
+
+    init(
+        @ViewBuilder label: @escaping () -> Label,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.label = label
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            label()
+                .font(.headline)
+            
+            content()
+                .padding(.top, 4)
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.secondary)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.separator, lineWidth: 0.5)
+        )
+    }
+}
+#endif
 
 #Preview {
     ContentView()

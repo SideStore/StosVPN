@@ -5,7 +5,7 @@ MARKETING_VERSION = 1.1.1
 CURRENT_PROJECT_VERSION = 1
 
 // Vars to be overwritten by `CodeSigning.xcconfig` if exists
-DEVELOPMENT_TEAM = S32Z3HMYVQ
+DEVELOPMENT_TEAM = 95J8WZ4TN8
 ORG_IDENTIFIER = com.stossy11
 
 // Codesigning settings defined optionally, see `CodeSigning.xcconfig.example`
