@@ -945,6 +945,7 @@ struct SettingsView: View {
                         Text("Spanish").tag("es")
                         Text("Italian").tag("it")
                         Text("Polish").tag("pl")
+                        Text("Chinese").tag("zh")
                     }
                     .onChange(of: selectedLanguage) { newValue in
                         let languageCode = newValue
@@ -1335,7 +1336,7 @@ class LanguageManager: ObservableObject {
 
     @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
     
-    private let supportedLanguages = ["en", "es", "it", "pl"]
+    private let supportedLanguages = ["en", "es", "it", "pl", "zh"]
     
     func updateLanguage(to languageCode: String) {
         if supportedLanguages.contains(languageCode) {
