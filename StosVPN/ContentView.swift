@@ -44,6 +44,7 @@ class TunnelManager: ObservableObject {
     @Published var waitingOnSettings: Bool = false
     @Published var vpnManager: NETunnelProviderManager?
     private var vpnObserver: NSObjectProtocol?
+    private var isProcessingStatusChange = false
     
     private var tunnelDeviceIp: String {
         UserDefaults.standard.string(forKey: "TunnelDeviceIP") ?? "10.7.0.0"
@@ -105,8 +106,8 @@ class TunnelManager: ObservableObject {
     }
     
     private init() {
-        loadTunnelPreferences()
         setupStatusObserver()
+        loadTunnelPreferences()
     }
     
     // MARK: - Private Methods
@@ -118,32 +119,29 @@ class TunnelManager: ObservableObject {
                 if let error = error {
                     VPNLogger.shared.log("Error loading preferences: \(error.localizedDescription)")
                     self.tunnelStatus = .error
+                    self.waitingOnSettings = true
                     return
                 }
                 
-                defer {
-                    self.waitingOnSettings = true
-                }
-                
                 self.hasLocalDeviceSupport = true
+                self.waitingOnSettings = true
                 
                 if let managers = managers, !managers.isEmpty {
-                    var stosManagers = [NETunnelProviderManager]()
-                    
-                    for manager in managers {
-                        if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol,
-                           proto.providerBundleIdentifier == self.tunnelBundleId {
-                            stosManagers.append(manager)
+                    let stosManagers = managers.filter { manager in
+                        guard let proto = manager.protocolConfiguration as? NETunnelProviderProtocol else {
+                            return false
                         }
+                        return proto.providerBundleIdentifier == self.tunnelBundleId
                     }
                     
                     if !stosManagers.isEmpty {
                         if stosManagers.count > 1 {
                             self.cleanupDuplicateManagers(stosManagers)
-                        } else {
-                            self.vpnManager = stosManagers.first
-                            self.updateTunnelStatus(from: stosManagers.first!.connection.status)
-                            VPNLogger.shared.log("Loaded existing StosVPN tunnel configuration")
+                        } else if let manager = stosManagers.first {
+                            self.vpnManager = manager
+                            let currentStatus = manager.connection.status
+                            VPNLogger.shared.log("Loaded existing StosVPN tunnel configuration with status: \(currentStatus.rawValue)")
+                            self.updateTunnelStatus(from: currentStatus)
                         }
                     } else {
                         VPNLogger.shared.log("No StosVPN tunnel configuration found")
@@ -163,19 +161,18 @@ class TunnelManager: ObservableObject {
         }
         
         let managerToKeep = activeManager ?? managers.first!
-        self.vpnManager = managerToKeep
-        self.updateTunnelStatus(from: managerToKeep.connection.status)
         
-        var removedCount = 0
-        for manager in managers {
-            if manager != managerToKeep {
-                manager.removeFromPreferences { error in
-                    if let error = error {
-                        VPNLogger.shared.log("Error removing duplicate VPN: \(error.localizedDescription)")
-                    } else {
-                        removedCount += 1
-                        VPNLogger.shared.log("Successfully removed duplicate VPN configuration")
-                    }
+        DispatchQueue.main.async { [weak self] in
+            self?.vpnManager = managerToKeep
+            self?.updateTunnelStatus(from: managerToKeep.connection.status)
+        }
+        
+        for manager in managers where manager != managerToKeep {
+            manager.removeFromPreferences { error in
+                if let error = error {
+                    VPNLogger.shared.log("Error removing duplicate VPN: \(error.localizedDescription)")
+                } else {
+                    VPNLogger.shared.log("Successfully removed duplicate VPN configuration")
                 }
             }
         }
@@ -187,9 +184,14 @@ class TunnelManager: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            guard let self = self,
-                  let connection = notification.object as? NEVPNConnection else {
-                return
+            guard let self = self else { return }
+            guard let connection = notification.object as? NEVPNConnection else { return }
+            
+            VPNLogger.shared.log("VPN Status notification received: \(connection.status.rawValue)")
+            
+            // Update status immediately if it's our manager
+            if let manager = self.vpnManager, connection == manager.connection {
+                self.updateTunnelStatus(from: connection.status)
             }
             
             self.handleVPNStatusChange(notification: notification)
@@ -197,29 +199,37 @@ class TunnelManager: ObservableObject {
     }
     
     private func updateTunnelStatus(from connectionStatus: NEVPNStatus) {
-        DispatchQueue.main.async {
-            switch connectionStatus {
-            case .invalid, .disconnected:
-                self.tunnelStatus = .disconnected
-            case .connecting:
-                self.tunnelStatus = .connecting
-            case .connected:
-                self.tunnelStatus = .connected
-            case .disconnecting:
-                self.tunnelStatus = .disconnecting
-            case .reasserting:
-                self.tunnelStatus = .connecting
-            @unknown default:
-                self.tunnelStatus = .error
+        let newStatus: TunnelStatus
+        switch connectionStatus {
+        case .invalid, .disconnected:
+            newStatus = .disconnected
+        case .connecting:
+            newStatus = .connecting
+        case .connected:
+            newStatus = .connected
+        case .disconnecting:
+            newStatus = .disconnecting
+        case .reasserting:
+            newStatus = .connecting
+        @unknown default:
+            newStatus = .error
+        }
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            if self.tunnelStatus != newStatus {
+                VPNLogger.shared.log("StosVPN status updated from \(self.tunnelStatus) to \(newStatus)")
             }
-            
-            VPNLogger.shared.log("StosVPN status updated: \(self.tunnelStatus)")
+            self.tunnelStatus = newStatus
         }
     }
     
     private func createStosVPNConfiguration(completion: @escaping (NETunnelProviderManager?) -> Void) {
         NETunnelProviderManager.loadAllFromPreferences { [weak self] (managers, error) in
-            guard let self = self else { return }
+            guard let self = self else {
+                completion(nil)
+                return
+            }
             
             if let error = error {
                 VPNLogger.shared.log("Error checking existing VPN configurations: \(error.localizedDescription)")
@@ -229,16 +239,15 @@ class TunnelManager: ObservableObject {
             
             if let managers = managers {
                 let stosManagers = managers.filter { manager in
-                    if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol {
-                        return proto.providerBundleIdentifier == self.tunnelBundleId
+                    guard let proto = manager.protocolConfiguration as? NETunnelProviderProtocol else {
+                        return false
                     }
-                    return false
+                    return proto.providerBundleIdentifier == self.tunnelBundleId
                 }
                 
-                if !stosManagers.isEmpty {
-                    let manager = stosManagers.first!
+                if let existingManager = stosManagers.first {
                     VPNLogger.shared.log("Found existing StosVPN configuration, using it instead of creating new one")
-                    completion(manager)
+                    completion(existingManager)
                     return
                 }
             }
@@ -291,14 +300,12 @@ class TunnelManager: ObservableObject {
             }
             
             let activeManager = managers.first { manager in
-                return manager.connection.status == .connected ||
-                       manager.connection.status == .connecting
+                manager.connection.status == .connected || manager.connection.status == .connecting
             }
             
             completion(activeManager)
         }
     }
-    
     
     // MARK: - Public Methods
     
@@ -311,6 +318,27 @@ class TunnelManager: ObservableObject {
     }
     
     func startVPN() {
+        if let manager = vpnManager {
+            let currentStatus = manager.connection.status
+            VPNLogger.shared.log("Current manager status: \(currentStatus.rawValue)")
+            
+            if currentStatus == .connected {
+                VPNLogger.shared.log("VPN already connected, updating UI")
+                DispatchQueue.main.async { [weak self] in
+                    self?.tunnelStatus = .connected
+                }
+                return
+            }
+            
+            if currentStatus == .connecting {
+                VPNLogger.shared.log("VPN already connecting, updating UI")
+                DispatchQueue.main.async { [weak self] in
+                    self?.tunnelStatus = .connecting
+                }
+                return
+            }
+        }
+        
         getActiveVPNManager { [weak self] activeManager in
             guard let self = self else { return }
             
@@ -329,71 +357,123 @@ class TunnelManager: ObservableObject {
     
     private func initializeAndStartStosVPN() {
         if let manager = vpnManager {
-            startExistingVPN(manager: manager)
-        } else {
-            NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, error in
+            manager.loadFromPreferences { [weak self] error in
                 guard let self = self else { return }
                 
                 if let error = error {
-                    VPNLogger.shared.log("Error reloading VPN configurations: \(error.localizedDescription)")
-                    self.createStosVPNConfiguration { manager in
-                        guard let manager = manager else { return }
-                        self.vpnManager = manager
+                    VPNLogger.shared.log("Error reloading manager: \(error.localizedDescription)")
+                    self.createAndStartVPN()
+                    return
+                }
+                
+                self.startExistingVPN(manager: manager)
+            }
+        } else {
+            createAndStartVPN()
+        }
+    }
+    
+    private func createAndStartVPN() {
+        NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                VPNLogger.shared.log("Error reloading VPN configurations: \(error.localizedDescription)")
+            }
+            
+            if let managers = managers {
+                let stosManagers = managers.filter { manager in
+                    guard let proto = manager.protocolConfiguration as? NETunnelProviderProtocol else {
+                        return false
+                    }
+                    return proto.providerBundleIdentifier == self.tunnelBundleId
+                }
+                
+                if !stosManagers.isEmpty {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.vpnManager = stosManagers.first
+                    }
+                    
+                    if stosManagers.count > 1 {
+                        self.cleanupDuplicateManagers(stosManagers)
+                    }
+                    
+                    if let manager = stosManagers.first {
                         self.startExistingVPN(manager: manager)
                     }
                     return
                 }
-                
-                if let managers = managers {
-                    let stosManagers = managers.filter { manager in
-                        if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol {
-                            return proto.providerBundleIdentifier == self.tunnelBundleId
-                        }
-                        return false
-                    }
-                    
-                    if !stosManagers.isEmpty {
-                        self.vpnManager = stosManagers.first
-                        
-                        if stosManagers.count > 1 {
-                            self.cleanupDuplicateManagers(stosManagers)
-                        }
-                        
-                        self.startExistingVPN(manager: stosManagers.first!)
-                        return
-                    }
+            }
+            
+            self.createStosVPNConfiguration { [weak self] manager in
+                guard let self = self, let manager = manager else { return }
+                DispatchQueue.main.async { [weak self] in
+                    self?.vpnManager = manager
                 }
-                
-                self.createStosVPNConfiguration { manager in
-                    guard let manager = manager else { return }
-                    self.vpnManager = manager
-                    self.startExistingVPN(manager: manager)
-                }
+                self.startExistingVPN(manager: manager)
             }
         }
     }
     
     private func startExistingVPN(manager: NETunnelProviderManager) {
-        guard tunnelStatus != .connected else {
+        // First check the actual current status
+        let currentStatus = manager.connection.status
+        VPNLogger.shared.log("Current VPN status before start attempt: \(currentStatus.rawValue)")
+        
+        if currentStatus == .connected {
             VPNLogger.shared.log("StosVPN tunnel is already connected")
+            DispatchQueue.main.async { [weak self] in
+                self?.tunnelStatus = .connected
+            }
+            return
+        }
+        
+        if currentStatus == .connecting {
+            VPNLogger.shared.log("StosVPN tunnel is already connecting")
+            DispatchQueue.main.async { [weak self] in
+                self?.tunnelStatus = .connecting
+            }
             return
         }
         
         manager.isEnabled = true
-        manager.saveToPreferences { error in
+        manager.saveToPreferences { [weak self] error in
+            guard let self = self else { return }
+            
             if let error = error {
-                VPNLogger.shared.log(error.localizedDescription)
+                VPNLogger.shared.log("Error saving preferences: \(error.localizedDescription)")
+                DispatchQueue.main.async { [weak self] in
+                    self?.tunnelStatus = .error
+                }
                 return
             }
             
-            // Reload it to apply
-            manager.loadFromPreferences { error in
+            manager.loadFromPreferences { [weak self] error in
+                guard let self = self else { return }
+                
                 if let error = error {
-                    VPNLogger.shared.log(error.localizedDescription)
+                    VPNLogger.shared.log("Error reloading preferences: \(error.localizedDescription)")
+                    DispatchQueue.main.async { [weak self] in
+                        self?.tunnelStatus = .error
+                    }
                     return
                 }
                 
-                self.tunnelStatus = .connecting
+                // Check status again after reload
+                let statusAfterReload = manager.connection.status
+                VPNLogger.shared.log("VPN status after reload: \(statusAfterReload.rawValue)")
+                
+                if statusAfterReload == .connected {
+                    VPNLogger.shared.log("VPN is already connected after reload")
+                    DispatchQueue.main.async { [weak self] in
+                        self?.tunnelStatus = .connected
+                    }
+                    return
+                }
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.tunnelStatus = .connecting
+                }
                 
                 let options: [String: NSObject] = [
                     "TunnelDeviceIP": self.tunnelDeviceIp as NSObject,
@@ -405,7 +485,9 @@ class TunnelManager: ObservableObject {
                     try manager.connection.startVPNTunnel(options: options)
                     VPNLogger.shared.log("StosVPN tunnel start initiated")
                 } catch {
-                    self.tunnelStatus = .error
+                    DispatchQueue.main.async { [weak self] in
+                        self?.tunnelStatus = .error
+                    }
                     VPNLogger.shared.log("Failed to start StosVPN tunnel: \(error.localizedDescription)")
                 }
             }
@@ -413,9 +495,15 @@ class TunnelManager: ObservableObject {
     }
     
     func stopVPN() {
-        guard let manager = vpnManager else { return }
+        guard let manager = vpnManager else {
+            VPNLogger.shared.log("No VPN manager available to stop")
+            return
+        }
         
-        tunnelStatus = .disconnecting
+        DispatchQueue.main.async { [weak self] in
+            self?.tunnelStatus = .disconnecting
+        }
+        
         manager.connection.stopVPNTunnel()
         VPNLogger.shared.log("StosVPN tunnel stop initiated")
         
@@ -425,9 +513,12 @@ class TunnelManager: ObservableObject {
     func handleVPNStatusChange(notification: Notification) {
         guard let connection = notification.object as? NEVPNConnection else { return }
         
+        VPNLogger.shared.log("Handling VPN status change: \(connection.status.rawValue)")
+        
+        // Always update status if it's our manager's connection
         if let manager = vpnManager, connection == manager.connection {
+            VPNLogger.shared.log("Status change is for our StosVPN manager")
             updateTunnelStatus(from: connection.status)
-            return
         }
         
         if connection.status == .disconnected &&
@@ -437,23 +528,40 @@ class TunnelManager: ObservableObject {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                 self?.initializeAndStartStosVPN()
             }
+            return
         }
         
-        // Check if this is a different StosVPN manager (perhaps a duplicate)
-        // This helps discover duplicates created by other means
-        NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, error in
+        // Prevent recursive calls when checking for duplicates
+        guard !isProcessingStatusChange else { return }
+        isProcessingStatusChange = true
+        
+        // Check for duplicates asynchronously without blocking
+        DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
             
-            if let managers = managers, !managers.isEmpty {
-                let stosManagers = managers.filter { manager in
-                    if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol {
-                        return proto.providerBundleIdentifier == self.tunnelBundleId
+            NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, error in
+                guard let self = self, let managers = managers, !managers.isEmpty else {
+                    DispatchQueue.main.async { [weak self] in
+                        self?.isProcessingStatusChange = false
                     }
-                    return false
+                    return
+                }
+                
+                let stosManagers = managers.filter { manager in
+                    guard let proto = manager.protocolConfiguration as? NETunnelProviderProtocol else {
+                        return false
+                    }
+                    return proto.providerBundleIdentifier == self.tunnelBundleId
                 }
                 
                 if stosManagers.count > 1 {
-                    self.cleanupDuplicateManagers(stosManagers)
+                    DispatchQueue.main.async { [weak self] in
+                        self?.cleanupDuplicateManagers(stosManagers)
+                    }
+                }
+                
+                DispatchQueue.main.async { [weak self] in
+                    self?.isProcessingStatusChange = false
                 }
             }
         }
@@ -462,7 +570,9 @@ class TunnelManager: ObservableObject {
     // MARK: - Cleanup Utilities
     
     func cleanupAllVPNConfigurations() {
-        NETunnelProviderManager.loadAllFromPreferences { managers, error in
+        NETunnelProviderManager.loadAllFromPreferences { [weak self] managers, error in
+            guard let self = self else { return }
+            
             if let error = error {
                 VPNLogger.shared.log("Error loading VPN configurations for cleanup: \(error.localizedDescription)")
                 return
@@ -471,28 +581,28 @@ class TunnelManager: ObservableObject {
             guard let managers = managers else { return }
             
             for manager in managers {
-                if let proto = manager.protocolConfiguration as? NETunnelProviderProtocol,
-                   proto.providerBundleIdentifier == self.tunnelBundleId {
-                    
-                    // If connected, disconnect first
-                    if manager.connection.status == .connected ||
-                       manager.connection.status == .connecting {
-                        manager.connection.stopVPNTunnel()
-                    }
-                    
-                    manager.removeFromPreferences { error in
-                        if let error = error {
-                            VPNLogger.shared.log("Error removing VPN configuration: \(error.localizedDescription)")
-                        } else {
-                            VPNLogger.shared.log("Successfully removed VPN configuration")
-                        }
+                guard let proto = manager.protocolConfiguration as? NETunnelProviderProtocol,
+                      proto.providerBundleIdentifier == self.tunnelBundleId else {
+                    continue
+                }
+                
+                if manager.connection.status == .connected || manager.connection.status == .connecting {
+                    manager.connection.stopVPNTunnel()
+                }
+                
+                manager.removeFromPreferences { error in
+                    if let error = error {
+                        VPNLogger.shared.log("Error removing VPN configuration: \(error.localizedDescription)")
+                    } else {
+                        VPNLogger.shared.log("Successfully removed VPN configuration")
                     }
                 }
             }
             
-            
-            self.vpnManager = nil
-            self.tunnelStatus = .disconnected
+            DispatchQueue.main.async { [weak self] in
+                self?.vpnManager = nil
+                self?.tunnelStatus = .disconnected
+            }
         }
     }
     
