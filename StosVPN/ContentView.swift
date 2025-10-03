@@ -945,6 +945,7 @@ struct SettingsView: View {
                         Text("Spanish").tag("es")
                         Text("Italian").tag("it")
                         Text("Polish").tag("pl")
+                        Text("Chinese").tag("zh")
                     }
                     .onChange(of: selectedLanguage) { newValue in
                         let languageCode = newValue
