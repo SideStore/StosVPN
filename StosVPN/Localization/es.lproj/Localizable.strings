@@ -37,11 +37,8 @@
 "data_collection_policy" = "Política de Recopilación de Datos";
 "app_version" = "Versión de la App";
 "help_and_support" = "Ayuda y Soporte";
-"language" = "Idioma";
-"english" = "Inglés";
-"spanish" = "Español";
-"italian" = "Italiano";
-"polish" = "Polish";
+"language" = "Establecer idioma";
+"dropdown_language" = "Idioma";
 "settings" = "Configuración";
 "done" = "Hecho";
 "warning_alert" = "Advertencia";
@@ -119,3 +116,9 @@
 "setup_get_started" = "Comenzar";
 "setup_next" = "Siguiente";
 "setup_skip" = "Saltar";
+
+/*MARK: Restart pop-up*/
+restart_title = "Reiniciar";
+restart_message = "Para aplicar los cambios, es necesario reiniciar la aplicación. ¿Desea continuar?";
+confirmYes = "Sí";
+confirmNo = "No";

@@ -822,14 +822,14 @@ struct ConnectionStatsView: View {
                 )
                 StatItemView(
                     title: "status",
-                    value: "active",
+                    value: Text("active"),
                     icon: "checkmark.circle.fill"
                 )
             }
             HStack(spacing: 30) {
                 StatItemView(
                     title: "network_interface",
-                    value: "local",
+                    value: Text("local"),
                     icon: "network"
                 )
                 StatItemView(
@@ -900,6 +900,7 @@ struct SettingsView: View {
     @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
 
     @State private var showNetworkWarning = false
+    @State private var showRestartPopUp = false
     
     var body: some View {
         NBNavigationStack {
@@ -940,16 +941,27 @@ struct SettingsView: View {
                 }
 
                 Section(header: Text("language")) {
-                    Picker("language", selection: $selectedLanguage) {
+                    Picker("dropdown_language", selection: $selectedLanguage) {
                         Text("English").tag("en")
-                        Text("Spanish").tag("es")
-                        Text("Italian").tag("it")
-                        Text("Polish").tag("pl")
+                        Text("Español").tag("es")
+                        Text("Italiano").tag("it")
+                        Text("Polski").tag("pl")
                     }
                     .onChange(of: selectedLanguage) { newValue in
                         let languageCode = newValue
                         LanguageManager.shared.updateLanguage(to: languageCode)
+                        showRestartPopUp = true
                     }
+                    .alert(isPresented: $showRestartPopUp){
+                            Alert(
+                                title: Text("restart_title"),
+                                message: Text("restart_message"),
+                                primaryButton: .default (Text("confirmYes")){
+                                    appState.reloadTrigger = UUID()
+                                },
+                                secondaryButton: .cancel(Text("confirmNo"))
+                            )
+                    }   
                 }
             }
             .alert(isPresented: $showNetworkWarning) {
@@ -1003,7 +1015,6 @@ struct SettingsView: View {
         }
     }
 }
-
 
 // MARK: - New Data Collection Info View
 struct DataCollectionInfoView: View {
