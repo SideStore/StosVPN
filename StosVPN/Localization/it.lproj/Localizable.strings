@@ -23,7 +23,13 @@
 "local"                  = "Locale";
 "assigned_ip"            = "IP Assegnato";
 
-/* MARK: Settins*/
+/* MARK: Locales */
+"english"                  = "Inglese";
+"spanish"                  = "Spagnolo";
+"italian"                  = "Italiano";
+"polish"                   = "Polish";
+
+/* MARK: Settings*/
 
 "connection_settings"      = "Impostazioni Connessione";
 "auto_connect_on_launch"   = "Connessione automatica all’avvio";

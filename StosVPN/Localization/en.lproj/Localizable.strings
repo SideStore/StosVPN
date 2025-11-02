@@ -23,6 +23,12 @@
 "local" = "Local";
 "assigned_ip" = "Assigned IP";
 
+/* MARK: Locales */
+"english"                  = "English";
+"spanish"                  = "Spanish";
+"italian"                  = "Italian";
+"polish"                   = "Polish";
+
 /* MARK: Settings */
 
 "connection_settings" = "Connection Settings";
