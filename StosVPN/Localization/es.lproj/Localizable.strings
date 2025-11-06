@@ -125,6 +125,6 @@
 
 /*MARK: Restart pop-up*/
 restart_title = "Reiniciar";
-restart_message = "Para aplicar los cambios, es necesario reiniciar la aplicación. ¿Desea continuar?";
+restart_message = "Para aplicar los cambios, es necesario reiniciar la aplicación.";
 confirmYes = "Sí";
 confirmNo = "No";

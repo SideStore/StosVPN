@@ -125,6 +125,6 @@
 
 /*MARK: Restart pop-up*/
 restart_title = "Riavvia";
-restart_message = "Per applicare le modifiche, c'è bisogno di riavviare l'applicazione. Vuoi continuare?";
+restart_message = "Per applicare le modifiche, c'è bisogno di riavviare l'applicazione.";
 confirmYes = "Si";
 confirmNo = "No";
