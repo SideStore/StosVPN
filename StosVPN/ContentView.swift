@@ -822,14 +822,14 @@ struct ConnectionStatsView: View {
                 )
                 StatItemView(
                     title: "status",
-                    value: Text("active"),
+                    value: NSLocalizedString("active", comment: ""),
                     icon: "checkmark.circle.fill"
                 )
             }
             HStack(spacing: 30) {
                 StatItemView(
                     title: "network_interface",
-                    value: Text("local"),
+                    value: NSLocalizedString("local", comment: ""),
                     icon: "network"
                 )
                 StatItemView(
@@ -956,10 +956,9 @@ struct SettingsView: View {
                             Alert(
                                 title: Text("restart_title"),
                                 message: Text("restart_message"),
-                                primaryButton: .default (Text("confirmYes")){
-                                    appState.reloadTrigger = UUID()
-                                },
-                                secondaryButton: .cancel(Text("confirmNo"))
+                                dismissButton: .cancel(Text("understand_button")) {
+                                    showRestartPopUp = true
+                                }
                             )
                     }   
                 }
@@ -1412,3 +1411,4 @@ struct tvOSGroupBox<Label: View, Content: View>: View {
 #Preview {
     ContentView()
 }
+
