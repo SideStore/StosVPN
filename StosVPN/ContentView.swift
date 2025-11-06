@@ -942,10 +942,10 @@ struct SettingsView: View {
 
                 Section(header: Text("language")) {
                     Picker("dropdown_language", selection: $selectedLanguage) {
-                        Text("English").tag("en")
-                        Text("Spanish").tag("es")
-                        Text("Italian").tag("it")
-                        Text("Polish").tag("pl")
+                        Text("english").tag("en")
+                        Text("spanish").tag("es")
+                        Text("italian").tag("it")
+                        Text("polish").tag("pl")
                     }
                     .onChange(of: selectedLanguage) { newValue in
                         let languageCode = newValue
