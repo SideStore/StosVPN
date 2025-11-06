@@ -822,14 +822,14 @@ struct ConnectionStatsView: View {
                 )
                 StatItemView(
                     title: "status",
-                    value: "active",
+                    value: NSLocalizedString("active", comment: ""),
                     icon: "checkmark.circle.fill"
                 )
             }
             HStack(spacing: 30) {
                 StatItemView(
                     title: "network_interface",
-                    value: "local",
+                    value: NSLocalizedString("local", comment: ""),
                     icon: "network"
                 )
                 StatItemView(
@@ -900,6 +900,7 @@ struct SettingsView: View {
     @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
 
     @State private var showNetworkWarning = false
+    @State private var showRestartPopUp = false
     
     var body: some View {
         NBNavigationStack {
@@ -940,16 +941,26 @@ struct SettingsView: View {
                 }
 
                 Section(header: Text("language")) {
-                    Picker("language", selection: $selectedLanguage) {
-                        Text("English").tag("en")
-                        Text("Spanish").tag("es")
-                        Text("Italian").tag("it")
-                        Text("Polish").tag("pl")
+                    Picker("dropdown_language", selection: $selectedLanguage) {
+                        Text("english").tag("en")
+                        Text("spanish").tag("es")
+                        Text("italian").tag("it")
+                        Text("polish").tag("pl")
                     }
                     .onChange(of: selectedLanguage) { newValue in
                         let languageCode = newValue
                         LanguageManager.shared.updateLanguage(to: languageCode)
+                        showRestartPopUp = true
                     }
+                    .alert(isPresented: $showRestartPopUp){
+                            Alert(
+                                title: Text("restart_title"),
+                                message: Text("restart_message"),
+                                dismissButton: .cancel(Text("understand_button")) {
+                                    showRestartPopUp = true
+                                }
+                            )
+                    }   
                 }
             }
             .alert(isPresented: $showNetworkWarning) {
@@ -1003,7 +1014,6 @@ struct SettingsView: View {
         }
     }
 }
-
 
 // MARK: - New Data Collection Info View
 struct DataCollectionInfoView: View {
