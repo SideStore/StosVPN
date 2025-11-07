@@ -4,8 +4,16 @@
   },
   "groups" : [
     {
+      "blend-mode-specializations" : [
+        {
+          "appearance" : "tinted",
+          "value" : "normal"
+        }
+      ],
+      "blur-material" : null,
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "Icon.png",
           "name" : "Icon",
           "position" : {
@@ -15,6 +23,12 @@
               0
             ]
           }
+        }
+      ],
+      "opacity-specializations" : [
+        {
+          "appearance" : "tinted",
+          "value" : 1
         }
       ],
       "shadow" : {

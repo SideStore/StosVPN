@@ -1342,9 +1342,7 @@ struct SetupPageView: View {
 
 class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
-
     @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
-    
     private let supportedLanguages = ["en", "es", "it", "pl"]
     
     func updateLanguage(to languageCode: String) {
