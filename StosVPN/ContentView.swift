@@ -118,7 +118,11 @@ class TunnelManager: ObservableObject {
             DispatchQueue.main.async {
                 if let error = error {
                     VPNLogger.shared.log("Error loading preferences: \(error.localizedDescription)")
+                    #if targetEnvironment(simulator)
+                    self.tunnelStatus = .disconnected
+                    #else
                     self.tunnelStatus = .error
+                    #endif
                     self.waitingOnSettings = true
                     return
                 }
@@ -199,7 +203,7 @@ class TunnelManager: ObservableObject {
     }
     
     private func updateTunnelStatus(from connectionStatus: NEVPNStatus) {
-        let newStatus: TunnelStatus
+        var newStatus: TunnelStatus
         switch connectionStatus {
         case .invalid, .disconnected:
             newStatus = .disconnected
@@ -214,6 +218,10 @@ class TunnelManager: ObservableObject {
         @unknown default:
             newStatus = .error
         }
+        
+        #if targetEnvironment(simulator)
+        newStatus = .connected
+        #endif
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }

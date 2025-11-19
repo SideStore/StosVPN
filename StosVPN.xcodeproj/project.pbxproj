@@ -10,6 +10,7 @@
 		0E6351BE2E18EABA002AF750 /* NavigationBackport in Frameworks */ = {isa = PBXBuildFile; productRef = 0E6351BD2E18EABA002AF750 /* NavigationBackport */; };
 		4EB3C7712D96715400C1B22C /* NetworkExtension.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4EB3C7702D96715400C1B22C /* NetworkExtension.framework */; };
 		4EB3C7792D96715400C1B22C /* TunnelProv.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4EB3C76E2D96715400C1B22C /* TunnelProv.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		4EE6B99B2E8F756700E30694 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 4EE6B99A2E8F756700E30694 /* AppIcon.icon */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -43,6 +44,7 @@
 		4EB3C7582D96631A00C1B22C /* StosVPN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = StosVPN.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EB3C76E2D96715400C1B22C /* TunnelProv.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TunnelProv.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4EB3C7702D96715400C1B22C /* NetworkExtension.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NetworkExtension.framework; path = System/Library/Frameworks/NetworkExtension.framework; sourceTree = SDKROOT; };
+		4EE6B99A2E8F756700E30694 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -90,6 +92,7 @@
 		4EB3C74F2D96631A00C1B22C = {
 			isa = PBXGroup;
 			children = (
+				4EE6B99A2E8F756700E30694 /* AppIcon.icon */,
 				0E6351B62E18DF53002AF750 /* Build.xcconfig */,
 				0E6351B72E18DF53002AF750 /* CodeSigning.xcconfig */,
 				0E6351B82E18DF53002AF750 /* CodeSigning.xcconfig.sample */,
@@ -218,6 +221,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4EE6B99B2E8F756700E30694 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,6 +297,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(TARGET_NAME)/$(TARGET_NAME).entitlements";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 95J8WZ4TN8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -369,6 +374,7 @@
 				CODE_SIGN_ENTITLEMENTS = "$(TARGET_NAME)/$(TARGET_NAME).entitlements";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 95J8WZ4TN8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -406,6 +412,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"StosVPN/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
@@ -433,6 +440,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CLANG_ENABLE_MODULES = YES;
 				DEVELOPMENT_ASSET_PATHS = "\"StosVPN/Preview Content\"";
 				ENABLE_PREVIEWS = YES;
@@ -457,6 +465,9 @@
 		4EB3C77C2D96715400C1B22C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				INFOPLIST_KEY_CFBundleDisplayName = TunnelProv;
+				INFOPLIST_KEY_NSHumanReadableCopyright = Stossy11;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arm64;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -476,6 +487,9 @@
 		4EB3C77D2D96715400C1B22C /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				INFOPLIST_KEY_CFBundleDisplayName = TunnelProv;
+				INFOPLIST_KEY_NSHumanReadableCopyright = Stossy11;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = arm64;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
