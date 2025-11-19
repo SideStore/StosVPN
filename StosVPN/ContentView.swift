@@ -118,11 +118,7 @@ class TunnelManager: ObservableObject {
             DispatchQueue.main.async {
                 if let error = error {
                     VPNLogger.shared.log("Error loading preferences: \(error.localizedDescription)")
-                    #if targetEnvironment(simulator)
-                    self.tunnelStatus = .disconnected
-                    #else
                     self.tunnelStatus = .error
-                    #endif
                     self.waitingOnSettings = true
                     return
                 }
@@ -203,7 +199,7 @@ class TunnelManager: ObservableObject {
     }
     
     private func updateTunnelStatus(from connectionStatus: NEVPNStatus) {
-        var newStatus: TunnelStatus
+        let newStatus: TunnelStatus
         switch connectionStatus {
         case .invalid, .disconnected:
             newStatus = .disconnected
@@ -218,10 +214,6 @@ class TunnelManager: ObservableObject {
         @unknown default:
             newStatus = .error
         }
-        
-        #if targetEnvironment(simulator)
-        newStatus = .connected
-        #endif
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
@@ -830,14 +822,14 @@ struct ConnectionStatsView: View {
                 )
                 StatItemView(
                     title: "status",
-                    value: "active",
+                    value: NSLocalizedString("active", comment: ""),
                     icon: "checkmark.circle.fill"
                 )
             }
             HStack(spacing: 30) {
                 StatItemView(
                     title: "network_interface",
-                    value: "local",
+                    value: NSLocalizedString("local", comment: ""),
                     icon: "network"
                 )
                 StatItemView(
@@ -908,6 +900,7 @@ struct SettingsView: View {
     @AppStorage("hasNotCompletedSetup") private var hasNotCompletedSetup = true
 
     @State private var showNetworkWarning = false
+    @State private var showRestartPopUp = false
     
     var body: some View {
         NBNavigationStack {
@@ -948,16 +941,26 @@ struct SettingsView: View {
                 }
 
                 Section(header: Text("language")) {
-                    Picker("language", selection: $selectedLanguage) {
-                        Text("English").tag("en")
-                        Text("Spanish").tag("es")
-                        Text("Italian").tag("it")
-                        Text("Polish").tag("pl")
+                    Picker("dropdown_language", selection: $selectedLanguage) {
+                        Text("english").tag("en")
+                        Text("spanish").tag("es")
+                        Text("italian").tag("it")
+                        Text("polish").tag("pl")
                     }
                     .onChange(of: selectedLanguage) { newValue in
                         let languageCode = newValue
                         LanguageManager.shared.updateLanguage(to: languageCode)
+                        showRestartPopUp = true
                     }
+                    .alert(isPresented: $showRestartPopUp){
+                            Alert(
+                                title: Text("restart_title"),
+                                message: Text("restart_message"),
+                                dismissButton: .cancel(Text("understand_button")) {
+                                    showRestartPopUp = true
+                                }
+                            )
+                    }   
                 }
             }
             .alert(isPresented: $showNetworkWarning) {
@@ -1011,7 +1014,6 @@ struct SettingsView: View {
         }
     }
 }
-
 
 // MARK: - New Data Collection Info View
 struct DataCollectionInfoView: View {
@@ -1340,9 +1342,7 @@ struct SetupPageView: View {
 
 class LanguageManager: ObservableObject {
     static let shared = LanguageManager()
-
     @Published var currentLanguage: String = Locale.current.languageCode ?? "en"
-    
     private let supportedLanguages = ["en", "es", "it", "pl"]
     
     func updateLanguage(to languageCode: String) {
