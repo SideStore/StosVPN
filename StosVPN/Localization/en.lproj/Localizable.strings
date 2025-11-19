@@ -23,6 +23,12 @@
 "local" = "Local";
 "assigned_ip" = "Assigned IP";
 
+/* MARK: Locales */
+"english"                  = "English";
+"spanish"                  = "Spanish";
+"italian"                  = "Italian";
+"polish"                   = "Polish";
+
 /* MARK: Settings */
 
 "connection_settings" = "Connection Settings";
@@ -37,11 +43,8 @@
 "data_collection_policy" = "Data Collection Policy";
 "app_version" = "App Version";
 "help_and_support" = "Help and Support";
-"language" = "Language";
-"english" = "English";
-"spanish" = "Spanish";
-"italian" = "Italian";
-"polish" = "Polish";
+"language" = "Set Language";
+"dropdown_language" = "Language";
 "settings" = "Settings";
 "done" = "Done";
 "warning_alert" = "Warning";
@@ -55,7 +58,7 @@
 "local_processing_only_description" = "All network traffic and configurations are processed locally on your device. No information ever leaves the device or is transmitted over the Internet.";
 "no_third_party_sharing" = "No Third Party Sharing";
 "no_third_party_sharing_description" = "Since we do not collect data, there is no sharing with third parties. We do not have analytics, tracking, or data collection mechanisms in this app.";
-"why_use_network_permissions" = "Why Use Network Permissions";
+"why_use_network_permissions" = "Why Use Network Permissions?";
 "why_use_network_permissions_description" = "StosVPN requires network extension permissions to create a local network interface on your device. This is used exclusively for local development and testing.";
 "our_promise" = "Our Promise";
 "our_promise_description" = "We are committed to privacy and transparency. This app is designed for developers to test and connect to local servers with no privacy concerns.";
@@ -119,3 +122,9 @@
 "setup_get_started" = "Get Started";
 "setup_next" = "Next";
 "setup_skip" = "Skip";
+
+/*MARK: Restart pop-up*/
+restart_title = "Restart";
+restart_message = "To apply the changes, you need to restart the application.";
+confirmYes = "Yes";
+confirmNo = "No";
