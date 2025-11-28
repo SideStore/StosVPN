@@ -118,6 +118,13 @@ class TunnelManager: ObservableObject {
             DispatchQueue.main.async {
                 if let error = error {
                     VPNLogger.shared.log("Error loading preferences: \(error.localizedDescription)")
+                    
+                    #if targetEnvironment(simulator)
+                    self.tunnelStatus = .disconnected
+                    #else
+                    self.tunnelStatus = .error
+                    #endif
+
                     self.tunnelStatus = .error
                     self.waitingOnSettings = true
                     return
